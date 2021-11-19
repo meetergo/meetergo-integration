@@ -25,7 +25,7 @@ Set meetergo settings and load script in the head of your page
         },
       };
     </script>
-    <script async  src="./dist/esbuild/browser.js"></script>
+    <script async  src="https://cdn.jsdelivr.net/gh/meetergo/meetergo-integration/dist/esbuild/browser.js"></script>
 
 ```
 
