@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <script>
+      window.meetergoSettings = {
+        company: "test-test-1",
+        floatingButton: {
+          position: "bottom-right",
+          attributes: {
+            "data-event": "15-min-meeting",
+          },
+        },
+        prefill: {
+          firstname: "John",
+          lastname: "smith",
+          email: "tester@testing.com",
+          phone: "0121196862",
+        },
+      };
+    </script>
+    <script src="./dist/esbuild/browser.js"></script>
+  </head>
+  <body>
+    <button
+      class="meetergo-modal-button meetergo-styled-button"
+      data-type="quick-booking"
+      data-event="15-min-meeting"
+    >
+      Open
+    </button>
+    <div
+      class="meetergo-iframe"
+      data-event="15-min-meeting"
+      data-type="quick-booking"
+    ></div>
+  </body>
+</html>
