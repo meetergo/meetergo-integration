@@ -7,26 +7,28 @@ Prefill customer information
 
 Set meetergo settings and load script in the head of your page
 
-```javascript
- <script>
-      window.meetergoSettings = {
-        company: "test-test-1",
-        floatingButton: {
-          position: "bottom-right",
-          attributes: {
-            "data-event": "15-min-meeting",
-          },
-        },
-        prefill: {
-          firstname: "John",
-          lastname: "smith",
-          email: "tester@testing.com",
-          phone: "0121196862",
-        },
-      };
-    </script>
-    <script async  src="https://cdn.jsdelivr.net/gh/meetergo/meetergo-integration/dist/esbuild/browser.js"></script>
-
+```html
+<script>
+  window.meetergoSettings = {
+    company: "test-test-1",
+    floatingButton: {
+      position: "bottom-right",
+      attributes: {
+        "data-event": "15-min-meeting",
+      },
+    },
+    prefill: {
+      firstname: "John",
+      lastname: "smith",
+      email: "tester@testing.com",
+      phone: "0121196862",
+    },
+  };
+</script>
+<script
+  async
+  src="https://cdn.jsdelivr.net/gh/meetergo/meetergo-integration/dist/esbuild/browser.js"
+></script>
 ```
 
 You can add booking iframe like so. Not specifying an event slug will show the main booking page.
