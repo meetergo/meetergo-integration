@@ -25,8 +25,11 @@
         let button = document.createElement("button");
         button.classList.add("meetergo-modal-button");
         button.innerHTML = window.meetergoSettings?.floatingButton?.text ?? "Book appointment";
-        if (window.meetergoSettings?.floatingButton?.attributes) {
-          for (const [key, value] of Object.entries(window.meetergoSettings.floatingButton.attributes)) {
+        const attributes = window.meetergoSettings?.floatingButton?.attributes;
+        if (attributes) {
+          for (const [key, value] of Object.entries(attributes)) {
+            if (key === "data-type" && value === "quick-booking" && !attributes["data-event"])
+              continue;
             button.setAttribute(key, value);
           }
         }
