@@ -83,9 +83,11 @@ export class MeetergoIntegration {
     const params = this.getPrifillParams();
     iframe.setAttribute(
       "src",
-      `${host}/${type === ModalType.QuickBooking ? "quick/" : ""}${
-        window.meetergoSettings?.company
-      }/${event}?${params}`
+      `${host}${
+        type === ModalType.QuickBooking ? "/quick" : ""
+      }${`/${window.meetergoSettings?.company}`}${
+        event ? `/${event}` : ""
+      }?${params}`
     );
     iframe.style.width = "100%";
     iframe.style.height = "100%";
