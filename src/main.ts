@@ -1,12 +1,5 @@
 import { MeetergoSettings } from "./declarations";
 
-export enum ModalType {
-  Booking = "booking",
-  QuickBooking = "quick-booking",
-}
-
-const host = "https://my.meetergo.com";
-
 export class MeetergoIntegration {
   constructor() {
     window.addEventListener("DOMContentLoaded", () => {
@@ -25,7 +18,8 @@ export class MeetergoIntegration {
   private addFloatingButton(): void {
     if (
       window.meetergoSettings?.floatingButton &&
-      window.meetergoSettings?.floatingButton?.position
+      window.meetergoSettings?.floatingButton?.position &&
+      window.meetergoSettings?.floatingButton.link
     ) {
       const position = window.meetergoSettings.floatingButton.position;
       let button = document.createElement("button");
@@ -33,18 +27,7 @@ export class MeetergoIntegration {
       button.innerHTML =
         window.meetergoSettings?.floatingButton?.text ?? "Book appointment";
 
-      const attributes = window.meetergoSettings?.floatingButton?.attributes;
-      if (attributes) {
-        for (const [key, value] of Object.entries(attributes)) {
-          if (
-            key === "data-type" &&
-            value === "quick-booking" &&
-            !attributes["data-event"]
-          )
-            continue;
-          button.setAttribute(key, value);
-        }
-      }
+      button.setAttribute("link", window.meetergoSettings.floatingButton.link);
 
       // CSS
       button.style.position = "fixed";
@@ -64,31 +47,21 @@ export class MeetergoIntegration {
     const buttons = document.getElementsByClassName("meetergo-modal-button");
     for (const button of buttons) {
       button.addEventListener("click", () => {
-        const type = button.getAttribute("data-type") as ModalType | null;
-        const event = button.getAttribute("data-event");
-        this.openModalWithContent({
-          type: type ?? ModalType.Booking,
-          event: event ?? undefined,
-        });
+        const link = button.getAttribute("link");
+        if (link) {
+          this.openModalWithContent({
+            link,
+          });
+        }
       });
     }
   }
 
-  public openModalWithContent(settings: {
-    type: ModalType;
-    event?: string;
-  }): void {
-    const { type, event } = settings;
+  public openModalWithContent(settings: { link: string }): void {
+    const { link } = settings;
     const iframe = document.createElement("iframe");
     const params = this.getPrifillParams();
-    iframe.setAttribute(
-      "src",
-      `${host}${
-        type === ModalType.QuickBooking ? "/quick" : ""
-      }${`/${window.meetergoSettings?.company}`}${
-        event ? `/${event}` : ""
-      }?${params}`
-    );
+    iframe.setAttribute("src", `${link}?${params}`);
     iframe.style.width = "100%";
     iframe.style.height = "100%";
     iframe.style.border = "none";
@@ -174,11 +147,8 @@ export class MeetergoIntegration {
     for (const anchor of anchors) {
       const iframe = document.createElement("iframe");
 
-      const event = anchor.getAttribute("data-event") ?? "";
-      iframe.setAttribute(
-        "src",
-        `${host}/${window.meetergoSettings?.company}/${event}?${params}`
-      );
+      const link = anchor.getAttribute("link") ?? "";
+      iframe.setAttribute("src", `${link}?${params}`);
       iframe.style.width = "100%";
       iframe.style.height = "100%";
       iframe.style.border = "none";

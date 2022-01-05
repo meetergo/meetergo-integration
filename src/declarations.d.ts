@@ -5,7 +5,7 @@ type MeetergoSettings = {
   floatingButton?: {
     position?: "top-right" | "bottom-right" | "botton-left" | "top-left";
     text?: string;
-    attributes?: Record<string, string>;
+    link?: string;
   };
   prefill?: {
     firstname?: string | undefined;

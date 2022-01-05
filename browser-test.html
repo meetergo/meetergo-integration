@@ -2,8 +2,11 @@
   <head>
     <script>
       window.meetergoSettings = {
-        company: "naturbaustoffhaus",
-        floatingButton: { position: "top-right", text: "Termin vereinbaren?" },
+        floatingButton: {
+          position: "bottom-left",
+          text: "Book Appointment",
+          link: "http://localhost:3000/book/q/f6785891-6ce2-4c1b-aae1-d1dde48c45ee",
+        },
       };
     </script>
     <script src="./dist/esbuild/browser.js"></script>
@@ -11,15 +14,13 @@
   <body>
     <button
       class="meetergo-modal-button meetergo-styled-button"
-      data-type="quick-booking"
-      data-event="15-min-meeting"
+      link="http://localhost:3000/book/c/meetergo"
     >
-      Open
+      yoo
     </button>
     <div
       class="meetergo-iframe"
-      data-event="15-min-meeting"
-      data-type="quick-booking"
+      link="http://localhost:3000/book/q/f6785891-6ce2-4c1b-aae1-d1dde48c45ee"
     ></div>
   </body>
 </html>
