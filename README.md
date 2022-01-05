@@ -13,9 +13,7 @@ Set meetergo settings and load script in the head of your page
     company: "test-test-1",
     floatingButton: {
       position: "bottom-right",
-      attributes: {
-        "data-event": "15-min-meeting",
-      },
+      link: "my.meetergo.com/book/my-booking-link",
     },
     prefill: {
       firstname: "John",
@@ -31,21 +29,18 @@ Set meetergo settings and load script in the head of your page
 ></script>
 ```
 
-You can add booking iframe like so. Not specifying an event slug will show the main booking page.
-Note that quick booking only works if you specify an event
+You can add booking iframe like so. just specify a booking link
 
 ```html
-<div
-  class="meetergo-iframe"
-  data-event="15-min-meeting"
-  data-type="quick-booking"
-></div>
+<div class="meetergo-iframe" link="my.meetergo.com/my-booking-link"></div>
 ```
 
 To make element open a booking modal simply give it give it `meetergo-modal-button` class.
-You can also specify `data-event` and `data-type` just like for iframes.
+You can also specify `link` just like for iframes.
 
 ## Prefilling customer information
+
+## Prefill Not working at the moment
 
 You can prefill customer information with `window.meetergo.setPrefill` function.
 Pass the following as param. Or you can set it directly on `window.meetergoSettings.prefill`.
@@ -71,17 +66,9 @@ You can reload the iframes with `window.meetergo.parseIframes`
 
 ## I don't like this. How do I do integrate meetergo manually?
 
-Simply make an iframe with the following link structure
+Simply make an iframe with with a booking link as src. Make sure to remove borders etc. to make it look nice.
 
-Main Booking page
-`https://my.meetergo.com/{{your-slug}}`
-
-Specific event
-`https://my.meetergo.com/{{your-slug}}/{{event-slug}}`
-
-Quick Booking
-Specific event
-`https://my.meetergo.com/quick/{{your-slug}}/{{event-slug}}`
+## Not working at the moment
 
 You can set these as query params on any link to prefill customer information
 
