@@ -5,11 +5,22 @@
         floatingButton: {
           position: "bottom-left",
           text: "Book Appointment",
-          link: "http://localhost:3000/book/q/f6785891-6ce2-4c1b-aae1-d1dde48c45ee",
+          link: "http://localhost:3000/book/u/laurynas-puskunigis/15-min.-meeting/laurynas-puskunigis",
         },
+        formListeners: [
+          {
+            link: "http://localhost:3000/book/u/laurynas-puskunigis/15-min.-meeting/laurynas-puskunigis",
+            formId: "15",
+          },
+          {
+            link: "http://localhost:3000/book/u/laurynas-puskunigis/new-meeting/laurynas-puskunigis",
+            formId: "30",
+          },
+        ],
       };
     </script>
     <script src="./dist/esbuild/browser.js"></script>
+    <script></script>
   </head>
   <body>
     <button
@@ -18,9 +29,20 @@
     >
       yoo
     </button>
-    <div
-      class="meetergo-iframe"
-      link="http://localhost:3000/book/q/f6785891-6ce2-4c1b-aae1-d1dde48c45ee"
-    ></div>
+    <form target="./second" method="post" id="15">
+      <p>15 min meeting</p>
+      <input value="lp@webnature.io" name="email" />
+      <input value="Laurynas" name="lol" />
+      <input value="Puskunigis" name="lastname" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <form target="./second" method="post" id="30">
+      <p>30 min meeting</p>
+      <input value="lp@webnature.io" name="email" />
+      <input value="Laurynas" name="firstname" />
+      <input value="Puskunigis" name="lastname" />
+      <button type="submit">Submit</button>
+    </form>
   </body>
 </html>
