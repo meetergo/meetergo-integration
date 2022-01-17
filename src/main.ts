@@ -8,11 +8,45 @@ export class MeetergoIntegration {
   }
 
   public init(): void {
+    this.listenToForms();
     this.addFloatingButton();
     this.addModal();
     this.parseIframes();
     this.parseButtons();
     this.addListeners();
+  }
+  public onFormSubmit(e: SubmitEvent): void {
+    e.preventDefault();
+    const target = e.currentTarget as HTMLFormElement;
+    if (!target) return;
+    const targetListener = window.meetergoSettings?.formListeners.find(
+      (listener) => {
+        if (!target.id) {
+          return !listener.formId;
+        } else {
+          return target.id === listener.formId;
+        }
+      }
+    );
+    if (!targetListener) return;
+
+    const formData = new FormData(target);
+    const data: Record<string, string> = {};
+    for (const [key, value] of formData) {
+      data[key] = value.toString();
+    }
+    window.meetergo.openModalWithContent({
+      link: targetListener.link,
+      existingParams: data,
+    });
+  }
+
+  private listenToForms(): void {
+    const forms = document.querySelectorAll("form");
+
+    for (const form of forms) {
+      form.addEventListener("submit", this.onFormSubmit, false);
+    }
   }
 
   private addFloatingButton(): void {
@@ -57,10 +91,13 @@ export class MeetergoIntegration {
     }
   }
 
-  public openModalWithContent(settings: { link: string }): void {
-    const { link } = settings;
+  public openModalWithContent(settings: {
+    link: string;
+    existingParams?: Record<string, string>;
+  }): void {
+    const { link, existingParams } = settings;
     const iframe = document.createElement("iframe");
-    const params = this.getPrifillParams();
+    const params = this.getPrifillParams(existingParams);
     iframe.setAttribute("src", `${link}?${params}`);
     iframe.style.width = "100%";
     iframe.style.height = "100%";
@@ -163,15 +200,37 @@ export class MeetergoIntegration {
       button = this.meetergoStyleButton(button as HTMLButtonElement);
     }
   }
-
-  private getPrifillParams(): string {
-    const params: string[] = [];
-    const prefill = window.meetergoSettings?.prefill;
-    if (prefill) {
-      Object.entries(prefill).forEach(([key, value]) => {
-        params.push(`${key}=${encodeURIComponent(value)}`);
-      });
+  private getWindowParams(): Record<string, string> {
+    const search = window.location.search;
+    const params = new URLSearchParams(search);
+    const paramObj: Record<string, string> = {};
+    for (const value of params.keys()) {
+      const param = params.get(value);
+      if (param) {
+        paramObj[value] = param;
+      }
     }
+    return paramObj;
+  }
+
+  private getPrifillParams(existingParams?: Record<string, string>): string {
+    const params: string[] = [];
+    let prefill = {
+      ...this.getWindowParams(),
+    };
+    if (window.meetergoSettings?.prefill) {
+      prefill = {
+        ...prefill,
+        ...window.meetergoSettings?.prefill,
+      };
+    }
+    prefill = {
+      ...prefill,
+      ...existingParams,
+    };
+    Object.entries(prefill).forEach(([key, value]) => {
+      params.push(`${key}=${encodeURIComponent(value)}`);
+    });
     return params.join("&");
   }
 

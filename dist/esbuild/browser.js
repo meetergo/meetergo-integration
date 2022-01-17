@@ -7,11 +7,42 @@
       });
     }
     init() {
+      this.listenToForms();
       this.addFloatingButton();
       this.addModal();
       this.parseIframes();
       this.parseButtons();
       this.addListeners();
+    }
+    onFormSubmit(e) {
+      e.preventDefault();
+      const target = e.currentTarget;
+      if (!target)
+        return;
+      const targetListener = window.meetergoSettings?.formListeners.find((listener) => {
+        if (!target.id) {
+          return !listener.formId;
+        } else {
+          return target.id === listener.formId;
+        }
+      });
+      if (!targetListener)
+        return;
+      const formData = new FormData(target);
+      const data = {};
+      for (const [key, value] of formData) {
+        data[key] = value.toString();
+      }
+      window.meetergo.openModalWithContent({
+        link: targetListener.link,
+        existingParams: data
+      });
+    }
+    listenToForms() {
+      const forms = document.querySelectorAll("form");
+      for (const form of forms) {
+        form.addEventListener("submit", this.onFormSubmit, false);
+      }
     }
     addFloatingButton() {
       if (window.meetergoSettings?.floatingButton && window.meetergoSettings?.floatingButton?.position && window.meetergoSettings?.floatingButton.link) {
@@ -41,9 +72,9 @@
       }
     }
     openModalWithContent(settings) {
-      const {link} = settings;
+      const {link, existingParams} = settings;
       const iframe = document.createElement("iframe");
-      const params = this.getPrifillParams();
+      const params = this.getPrifillParams(existingParams);
       iframe.setAttribute("src", `${link}?${params}`);
       iframe.style.width = "100%";
       iframe.style.height = "100%";
@@ -132,14 +163,36 @@
         button = this.meetergoStyleButton(button);
       }
     }
-    getPrifillParams() {
-      const params = [];
-      const prefill = window.meetergoSettings?.prefill;
-      if (prefill) {
-        Object.entries(prefill).forEach(([key, value]) => {
-          params.push(`${key}=${encodeURIComponent(value)}`);
-        });
+    getWindowParams() {
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+      const paramObj = {};
+      for (const value of params.keys()) {
+        const param = params.get(value);
+        if (param) {
+          paramObj[value] = param;
+        }
       }
+      return paramObj;
+    }
+    getPrifillParams(existingParams) {
+      const params = [];
+      let prefill = {
+        ...this.getWindowParams()
+      };
+      if (window.meetergoSettings?.prefill) {
+        prefill = {
+          ...prefill,
+          ...window.meetergoSettings?.prefill
+        };
+      }
+      prefill = {
+        ...prefill,
+        ...existingParams
+      };
+      Object.entries(prefill).forEach(([key, value]) => {
+        params.push(`${key}=${encodeURIComponent(value)}`);
+      });
       return params.join("&");
     }
     setPrefill(prefill) {

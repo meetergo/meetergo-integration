@@ -1,5 +1,10 @@
 import { MeetergoIntegration } from "./main";
 
+type FormListener = {
+  link: string;
+  formId?: string;
+};
+
 type MeetergoSettings = {
   company: string;
   floatingButton?: {
@@ -7,19 +12,8 @@ type MeetergoSettings = {
     text?: string;
     link?: string;
   };
-  prefill?: {
-    firstname?: string | undefined;
-    lastname?: string | undefined;
-    email?: string | undefined;
-    note?: string | undefined;
-    phone?: string | undefined;
-    country?: string | undefined;
-    addressLine1?: string | undefined;
-    addressLine2?: string | undefined;
-    city?: string | undefined;
-    postalCode?: string | undefined;
-    vatNumber?: string | undefined;
-  };
+  prefill?: Record<string, string>;
+  formListeners: FormListener[];
 };
 
 declare global {
