@@ -144,8 +144,8 @@ export class MeetergoIntegration {
     content.style.height = "90%";
     content.style.backgroundColor = "white";
     content.style.borderRadius = "0.7rem";
-    content.style.maxWidth = "800px";
-    content.style.maxHeight = "850px";
+    content.style.maxWidth = "650px";
+    content.style.maxHeight = "650px";
     content.style.overflow = "hidden";
 
     modal.appendChild(overlay);
