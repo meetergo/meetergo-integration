@@ -117,6 +117,7 @@ export class MeetergoIntegration {
   }): void {
     const { link, existingParams } = settings;
     const iframe = document.createElement("iframe");
+    iframe.name = "meetergo-embedded-modal";
     const params = this.getPrifillParams(existingParams);
     iframe.setAttribute("src", `${link}?${params}`);
     iframe.style.width = "100%";
