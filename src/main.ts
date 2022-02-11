@@ -89,6 +89,26 @@ export class MeetergoIntegration {
         }
       });
     }
+
+    window.onmessage = (e) => {
+      const meetergoEvent = e.data as {
+        event: string;
+        data: any;
+      };
+      switch (meetergoEvent.event) {
+        case "open-modal": {
+          const data = meetergoEvent.data as {
+            link: string;
+            params: Record<string, string>;
+          };
+
+          this.openModalWithContent({
+            link: data.link,
+            existingParams: data.params,
+          });
+        }
+      }
+    };
   }
 
   public openModalWithContent(settings: {
@@ -97,6 +117,7 @@ export class MeetergoIntegration {
   }): void {
     const { link, existingParams } = settings;
     const iframe = document.createElement("iframe");
+    iframe.name = "meetergo-embedded-modal";
     const params = this.getPrifillParams(existingParams);
     iframe.setAttribute("src", `${link}?${params}`);
     iframe.style.width = "100%";
