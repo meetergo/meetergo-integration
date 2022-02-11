@@ -89,6 +89,26 @@ export class MeetergoIntegration {
         }
       });
     }
+
+    window.onmessage = (e) => {
+      const meetergoEvent = e.data as {
+        event: string;
+        data: any;
+      };
+      switch (meetergoEvent.event) {
+        case "open-modal": {
+          const data = meetergoEvent.data as {
+            link: string;
+            params: Record<string, string>;
+          };
+
+          this.openModalWithContent({
+            link: data.link,
+            existingParams: data.params,
+          });
+        }
+      }
+    };
   }
 
   public openModalWithContent(settings: {

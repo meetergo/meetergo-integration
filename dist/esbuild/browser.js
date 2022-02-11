@@ -70,6 +70,18 @@
           }
         });
       }
+      window.onmessage = (e) => {
+        const meetergoEvent = e.data;
+        switch (meetergoEvent.event) {
+          case "open-modal": {
+            const data = meetergoEvent.data;
+            this.openModalWithContent({
+              link: data.link,
+              existingParams: data.params
+            });
+          }
+        }
+      };
     }
     openModalWithContent(settings) {
       const {link, existingParams} = settings;
