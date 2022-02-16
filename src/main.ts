@@ -210,6 +210,7 @@ export class MeetergoIntegration {
       iframe.style.width = "100%";
       iframe.style.height = "100%";
       iframe.style.border = "none";
+      iframe.style.minHeight = "650px";
       anchor.replaceChildren(iframe);
     }
   }
