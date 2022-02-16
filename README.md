@@ -1,4 +1,4 @@
-# Meetergo page integration
+# meetergo page integration
 
 Add meetergo iframes or booking buttons with modals
 Prefill customer information
@@ -39,8 +39,6 @@ To make element open a booking modal simply give it give it `meetergo-modal-butt
 You can also specify `link` just like for iframes.
 
 ## Prefilling customer information
-
-## Prefill Not working at the moment
 
 You can prefill customer information with `window.meetergo.setPrefill` function.
 Pass the following as param. Or you can set it directly on `window.meetergoSettings.prefill`.
