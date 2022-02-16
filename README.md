@@ -68,8 +68,6 @@ You can reload the iframes with `window.meetergo.parseIframes`
 
 Simply make an iframe with with a booking link as src. Make sure to remove borders etc. to make it look nice.
 
-## Not working at the moment
-
 You can set these as query params on any link to prefill customer information
 
 ```typescript
