@@ -131,7 +131,7 @@
       content.style.backgroundColor = "white";
       content.style.borderRadius = "0.7rem";
       content.style.maxWidth = "650px";
-      content.style.maxHeight = "650px";
+      content.style.maxHeight = "690px";
       content.style.overflow = "hidden";
       modal.appendChild(overlay);
       modal.appendChild(content);
@@ -167,7 +167,7 @@
         iframe.style.width = "100%";
         iframe.style.height = "100%";
         iframe.style.border = "none";
-        iframe.style.minHeight = "650px";
+        iframe.style.minHeight = "690px";
         anchor.replaceChildren(iframe);
       }
     }
