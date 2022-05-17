@@ -11,6 +11,8 @@ type MeetergoSettings = {
     position?: "top-right" | "bottom-right" | "botton-left" | "top-left";
     text?: string;
     link?: string;
+    backgroundColor?: string;
+    textColor?: string;
   };
   prefill?: Record<string, string>;
   formListeners: FormListener[];

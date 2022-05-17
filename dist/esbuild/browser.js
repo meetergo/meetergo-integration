@@ -55,6 +55,10 @@
         position.includes("top") ? button.style.top = "0" : button.style.bottom = "0";
         position.includes("left") ? button.style.left = "0" : button.style.right = "0";
         button = this.meetergoStyleButton(button);
+        if (window.meetergoSettings?.floatingButton.backgroundColor)
+          button.style.backgroundColor = window.meetergoSettings?.floatingButton.backgroundColor;
+        if (window.meetergoSettings?.floatingButton.textColor)
+          button.style.color = window.meetergoSettings?.floatingButton.textColor;
         document.body.appendChild(button);
       }
     }
