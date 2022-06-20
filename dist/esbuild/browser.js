@@ -124,7 +124,7 @@
       overlay.style.left = "0";
       overlay.style.width = "100%";
       overlay.style.height = "100%";
-      overlay.style.backgroundColor = "rgba(0,0,0,0.7)";
+      overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
       overlay.onclick = () => window.meetergo.closeModal();
       const content = document.createElement("div");
       content.id = "meetergo-modal-content";
@@ -132,9 +132,9 @@
       content.style.position = "relative";
       content.style.width = "90%";
       content.style.height = "90%";
-      content.style.backgroundColor = "white";
+      content.style.backgroundColor = "rgba(0,0,0,0)";
       content.style.borderRadius = "0.7rem";
-      content.style.maxWidth = "650px";
+      content.style.maxWidth = "700px";
       content.style.maxHeight = "690px";
       content.style.overflow = "hidden";
       modal.appendChild(overlay);
