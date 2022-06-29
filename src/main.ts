@@ -14,7 +14,39 @@ export class MeetergoIntegration {
     this.parseIframes();
     this.parseButtons();
     this.addListeners();
+    this.addGeneralCss();
   }
+
+  private addGeneralCss() {
+    const style = document.createElement("style");
+    style.textContent = `.meetergo-spinner {
+      display: inline-block;
+      width: 64px;
+      height: 100px;
+      position: absolute;
+    }
+    .meetergo-spinner:after {
+      content: " ";
+      display: block;
+      width: 40px;
+      height: 40px;
+      margin: 8px;
+      border-radius: 50%;
+      border: 6px solid #fff;
+      border-color: #fff transparent #fff transparent;
+      animation: meetergo-spinner 1.2s linear infinite;
+    }
+    @keyframes meetergo-spinner {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }`;
+    document.head.appendChild(style);
+  }
+
   public onFormSubmit(e: SubmitEvent): void {
     e.preventDefault();
     const target = e.currentTarget as HTMLFormElement;
@@ -161,11 +193,15 @@ export class MeetergoIntegration {
     overlay.style.height = "100%";
     overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
 
+    const spinner = document.createElement("div");
+    spinner.className = "meetergo-spinner";
+    spinner.style.zIndex = "1002";
+
     overlay.onclick = () => window.meetergo.closeModal();
 
     const content = document.createElement("div");
     content.id = "meetergo-modal-content";
-    content.style.zIndex = "1002";
+    content.style.zIndex = "1003";
     content.style.position = "relative";
     content.style.width = "90%";
     content.style.height = "90%";
@@ -177,6 +213,7 @@ export class MeetergoIntegration {
 
     modal.appendChild(overlay);
     modal.appendChild(content);
+    modal.appendChild(spinner);
 
     document.body.appendChild(modal);
   }
