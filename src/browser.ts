@@ -1,2 +1,2 @@
-import { meetergo } from "./main";
+import { meetergo } from './main';
 window.meetergo = meetergo;
