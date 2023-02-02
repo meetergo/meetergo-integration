@@ -1,269 +1,55 @@
-(() => {
-  // src/main.ts
-  var MeetergoIntegration = class {
-    constructor() {
-      window.addEventListener("DOMContentLoaded", () => {
-        this.init();
-      });
-    }
-    init() {
-      this.listenToForms();
-      this.addFloatingButton();
-      this.addModal();
-      this.parseIframes();
-      this.parseButtons();
-      this.addListeners();
-      this.addGeneralCss();
-    }
-    addGeneralCss() {
-      const style = document.createElement("style");
-      style.textContent = `.meetergo-spinner {
-      display: inline-block;
-      width: 64px;
-      height: 100px;
+(()=>{var r=class{constructor(){window.addEventListener("DOMContentLoaded",()=>{this.init()})}init(){this.listenToForms(),this.addFloatingButton(),this.addModal(),this.parseIframes(),this.parseButtons(),this.addListeners(),this.addGeneralCss()}addGeneralCss(){let e=document.createElement("style");e.textContent=`
+    .close-button {
+      all: unset;
       position: absolute;
-    }
-    .meetergo-spinner:after {
-      content: " ";
-      display: block;
+      top: 16px;
+      right: 16px;
+      background: #fff;
+      border-radius: 100%;
       width: 40px;
       height: 40px;
-      margin: 8px;
-      border-radius: 50%;
-      border: 6px solid #fff;
-      border-color: #fff transparent #fff transparent;
-      animation: meetergo-spinner 1.2s linear infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 350ms;
+      color: #9ca3af;
+      cursor: pointer;
     }
-    @keyframes meetergo-spinner {
+
+    .close-button:hover{
+      color: #000;
+    }
+
+    .meetergo-spinner {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border: 6px solid #FFF;
+      border-bottom-color: #d1d5db;
+      border-radius: 50%;
+      display: inline-block;
+      box-sizing: border-box;
+      animation: rotation 1s linear infinite;
+    }
+  
+    @keyframes rotation {
       0% {
-        transform: rotate(0deg);
+          transform: rotate(0deg);
       }
       100% {
-        transform: rotate(360deg);
-      }
-    }`;
-      document.head.appendChild(style);
-    }
-    onFormSubmit(e) {
-      e.preventDefault();
-      const target = e.currentTarget;
-      if (!target)
-        return;
-      const targetListener = window.meetergoSettings?.formListeners.find((listener) => {
-        if (!target.id) {
-          return !listener.formId;
-        } else {
-          return target.id === listener.formId;
-        }
-      });
-      if (!targetListener)
-        return;
-      const formData = new FormData(target);
-      const data = {};
-      for (const [key, value] of formData) {
-        data[key] = value.toString();
-      }
-      window.meetergo.openModalWithContent({
-        link: targetListener.link,
-        existingParams: data
-      });
-    }
-    listenToForms() {
-      const forms = document.querySelectorAll("form");
-      for (const form of forms) {
-        form.addEventListener("submit", this.onFormSubmit, false);
+          transform: rotate(360deg);
       }
     }
-    addFloatingButton() {
-      if (window.meetergoSettings?.floatingButton && window.meetergoSettings?.floatingButton?.position && window.meetergoSettings?.floatingButton.link) {
-        const position = window.meetergoSettings.floatingButton.position;
-        let button = document.createElement("button");
-        button.classList.add("meetergo-modal-button");
-        button.innerHTML = window.meetergoSettings?.floatingButton?.text ?? "Book appointment";
-        button.setAttribute("link", window.meetergoSettings.floatingButton.link);
-        button.style.position = "fixed";
-        position.includes("top") ? button.style.top = "0" : button.style.bottom = "0";
-        position.includes("left") ? button.style.left = "0" : button.style.right = "0";
-        button = this.meetergoStyleButton(button);
-        if (window.meetergoSettings?.floatingButton.backgroundColor)
-          button.style.backgroundColor = window.meetergoSettings?.floatingButton.backgroundColor;
-        if (window.meetergoSettings?.floatingButton.textColor)
-          button.style.color = window.meetergoSettings?.floatingButton.textColor;
-        document.body.appendChild(button);
-      }
-    }
-    addListeners() {
-      const buttons = document.getElementsByClassName("meetergo-modal-button");
-      for (const button of buttons) {
-        button.addEventListener("click", () => {
-          const link = button.getAttribute("link");
-          if (link) {
-            this.openModalWithContent({
-              link
-            });
-          }
-        });
-      }
-      window.onmessage = (e) => {
-        const meetergoEvent = e.data;
-        switch (meetergoEvent.event) {
-          case "open-modal": {
-            const data = meetergoEvent.data;
-            this.openModalWithContent({
-              link: data.link,
-              existingParams: data.params
-            });
-          }
-        }
-      };
-    }
-    openModalWithContent(settings) {
-      const {link, existingParams} = settings;
-      const iframe = document.createElement("iframe");
-      iframe.name = "meetergo-embedded-modal";
-      const params = this.getPrifillParams(existingParams);
-      iframe.setAttribute("src", `${link}?${params}`);
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-      iframe.style.border = "none";
-      const modalContent = document.getElementById("meetergo-modal-content");
-      if (modalContent) {
-        modalContent.replaceChildren(iframe);
-      }
-      this.openModal();
-    }
-    addModal() {
-      const modal = document.createElement("div");
-      modal.id = "meetergo-modal";
-      modal.style.zIndex = "1000";
-      modal.style.position = "fixed";
-      modal.style.transition = "visibility 0s linear 0.1s,opacity 0.3s ease";
-      modal.style.top = "0";
-      modal.style.left = "0";
-      modal.style.width = "100%";
-      modal.style.height = "100%";
-      modal.style.display = "flex";
-      modal.style.justifyContent = "center";
-      modal.style.alignItems = "center";
-      modal.style.visibility = "hidden";
-      modal.style.opacity = "0";
-      const overlay = document.createElement("div");
-      overlay.style.zIndex = "1001";
-      overlay.style.position = "fixed";
-      overlay.style.top = "0";
-      overlay.style.left = "0";
-      overlay.style.width = "100%";
-      overlay.style.height = "100%";
-      overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
-      const spinner = document.createElement("div");
-      spinner.className = "meetergo-spinner";
-      spinner.style.zIndex = "1002";
-      overlay.onclick = () => window.meetergo.closeModal();
-      const content = document.createElement("div");
-      content.id = "meetergo-modal-content";
-      content.style.zIndex = "1003";
-      content.style.position = "relative";
-      content.style.width = "90%";
-      content.style.height = "90%";
-      content.style.backgroundColor = "rgba(0,0,0,0)";
-      content.style.borderRadius = "0.7rem";
-      content.style.maxWidth = "700px";
-      content.style.maxHeight = "690px";
-      content.style.overflow = "hidden";
-      modal.appendChild(overlay);
-      modal.appendChild(content);
-      modal.appendChild(spinner);
-      document.body.appendChild(modal);
-    }
-    openModal() {
-      const modal = document.getElementById("meetergo-modal");
-      if (modal) {
-        modal.style.visibility = "visible";
-        modal.style.opacity = "1";
-      }
-    }
-    closeModal(preventClearContent) {
-      const modal = document.getElementById("meetergo-modal");
-      if (modal) {
-        modal.style.visibility = "hidden";
-        modal.style.opacity = "0";
-        if (!preventClearContent) {
-          const content = document.getElementById("meetergo-modal-content");
-          if (content) {
-            content.replaceChildren();
-          }
-        }
-      }
-    }
-    parseIframes() {
-      const anchors = document.getElementsByClassName("meetergo-iframe");
-      const params = this.getPrifillParams();
-      for (const anchor of anchors) {
-        const iframe = document.createElement("iframe");
-        const link = anchor.getAttribute("link") ?? "";
-        iframe.setAttribute("src", `${link}?${params}`);
-        iframe.style.width = "100%";
-        iframe.style.height = "100%";
-        iframe.style.border = "none";
-        iframe.style.minHeight = "690px";
-        anchor.replaceChildren(iframe);
-      }
-    }
-    parseButtons() {
-      const buttons = document.getElementsByClassName("meetergo-styled-button");
-      for (let button of buttons) {
-        button = this.meetergoStyleButton(button);
-      }
-    }
-    getWindowParams() {
-      const search = window.location.search;
-      const params = new URLSearchParams(search);
-      const paramObj = {};
-      for (const value of params.keys()) {
-        const param = params.get(value);
-        if (param) {
-          paramObj[value] = param;
-        }
-      }
-      return paramObj;
-    }
-    getPrifillParams(existingParams) {
-      const params = [];
-      let prefill = {
-        ...this.getWindowParams()
-      };
-      if (window.meetergoSettings?.prefill) {
-        prefill = {
-          ...prefill,
-          ...window.meetergoSettings?.prefill
-        };
-      }
-      prefill = {
-        ...prefill,
-        ...existingParams
-      };
-      Object.entries(prefill).forEach(([key, value]) => {
-        params.push(`${key}=${encodeURIComponent(value)}`);
-      });
-      return params.join("&");
-    }
-    setPrefill(prefill) {
-      window.meetergoSettings.prefill = prefill;
-    }
-    meetergoStyleButton(button) {
-      button.style.margin = "0.5rem";
-      button.style.padding = "0.8rem";
-      button.style.fontWeight = "bold";
-      button.style.color = "white";
-      button.style.backgroundColor = "#0A64BC";
-      button.style.borderRadius = "0.5rem";
-      button.style.border = "none";
-      button.style.cursor = "pointer";
-      return button;
-    }
-  };
-  var meetergo = new MeetergoIntegration();
-
-  // src/browser.ts
-  window.meetergo = meetergo;
-})();
+    `,document.head.appendChild(e)}onFormSubmit(e){e.preventDefault();let t=e.currentTarget;if(!t)return;let n=window.meetergoSettings?.formListeners.find(s=>t.id?t.id===s.formId:!s.formId);if(!n)return;let o=new FormData(t),i={};for(let[s,a]of o)i[s]=a.toString();window.meetergo.openModalWithContent({link:n.link,existingParams:i})}listenToForms(){let e=document.querySelectorAll("form");for(let t of e)t.addEventListener("submit",this.onFormSubmit,!1)}addFloatingButton(){if(window.meetergoSettings?.floatingButton&&window.meetergoSettings?.floatingButton?.position&&window.meetergoSettings?.floatingButton.link){let e=window.meetergoSettings.floatingButton.position,t=document.createElement("button");t.classList.add("meetergo-modal-button"),t.innerHTML=window.meetergoSettings?.floatingButton?.text??"Book appointment",t.setAttribute("link",window.meetergoSettings.floatingButton.link),t.style.position="fixed",e.includes("top")?t.style.top="0":t.style.bottom="0",e.includes("left")?t.style.left="0":t.style.right="0",t=this.meetergoStyleButton(t),window.meetergoSettings?.floatingButton.backgroundColor&&(t.style.backgroundColor=window.meetergoSettings?.floatingButton.backgroundColor),window.meetergoSettings?.floatingButton.textColor&&(t.style.color=window.meetergoSettings?.floatingButton.textColor),document.body.appendChild(t)}}addListeners(){let e=document.getElementsByClassName("meetergo-modal-button");for(let t of e)t.addEventListener("click",()=>{let n=t.getAttribute("link");n&&this.openModalWithContent({link:n})});window.onmessage=t=>{let n=t.data;switch(n.event){case"open-modal":{let o=n.data;this.openModalWithContent({link:o.link,existingParams:o.params});break}case"close-modal":{window.meetergo.closeModal();break}}}}openModalWithContent(e){let{link:t,existingParams:n}=e,o=document.createElement("iframe");o.name="meetergo-embedded-modal";let i=this.getPrifillParams(n);o.setAttribute("src",`${t}?${i}`),o.style.width="100%",o.style.height="100%",o.style.border="none";let s=document.getElementById("meetergo-modal-content");s&&s.replaceChildren(o),this.openModal()}addModal(){let e=document.createElement("div");e.id="meetergo-modal",e.style.zIndex="999999",e.style.position="fixed",e.style.transition="visibility 0s linear 0.1s,opacity 0.3s ease",e.style.top="0",e.style.left="0",e.style.width="100%",e.style.height="100%",e.style.display="flex",e.style.justifyContent="center",e.style.alignItems="center",e.style.visibility="hidden",e.style.opacity="0";let t=document.createElement("div");t.style.zIndex="1001",t.style.position="fixed",t.style.top="0",t.style.left="0",t.style.width="100%",t.style.height="100%",t.style.backgroundColor="rgba(0,0,0,0.6)";let n=document.createElement("div");n.className="meetergo-spinner",n.style.zIndex="1002",t.onclick=()=>window.meetergo.closeModal();let o=document.createElement("div");o.id="meetergo-modal-content",o.style.zIndex="1003",o.style.position="relative",o.style.width="100%",o.style.height="100%",o.style.backgroundColor="rgba(0,0,0,0)",o.style.borderRadius="0.7rem",o.style.overflow="hidden";let i=document.createElement("button");i.className="close-button",i.style.zIndex="1004",i.onclick=()=>window.meetergo.closeModal(),i.innerHTML=`<svg
+      stroke="currentColor"
+      fill="currentColor"
+      stroke-width="0"
+      viewBox="0 0 512 512"
+      height="24px"
+      width="24px"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M289.94 256l95-95A24 24 0 00351 127l-95 95-95-95a24 24 0 00-34 34l95 95-95 95a24 24 0 1034 34l95-95 95 95a24 24 0 0034-34z"
+      ></path>
+    </svg>`,e.appendChild(t),e.appendChild(o),e.appendChild(n),e.appendChild(i),document.body.appendChild(e)}openModal(){let e=document.getElementById("meetergo-modal");if(e){e.style.visibility="visible",e.style.opacity="1";let t=e.getElementsByClassName("meetergo-spinner");if(t.length>0){let[n]=t;n instanceof HTMLElement&&(n.style.visibility="visible",n.style.opacity="1")}}}closeModal(e){let t=document.getElementById("meetergo-modal");if(t){t.style.visibility="hidden",t.style.opacity="0";let n=t.getElementsByClassName("meetergo-spinner");if(n.length>0){let[o]=n;o instanceof HTMLElement&&(o.style.visibility="hidden",o.style.opacity="0")}if(!e){let o=document.getElementById("meetergo-modal-content");o&&o.replaceChildren()}}}parseIframes(){let e=document.getElementsByClassName("meetergo-iframe"),t=this.getPrifillParams();for(let n of e){let o=document.createElement("iframe"),i=n.getAttribute("link")??"";o.setAttribute("src",`${i}?${t}`),o.style.width="100%",o.style.height="100%",o.style.border="none",o.style.minHeight="690px",n.replaceChildren(o)}}parseButtons(){let e=document.getElementsByClassName("meetergo-styled-button");for(let t of e)t=this.meetergoStyleButton(t)}getWindowParams(){let e=window.location.search,t=new URLSearchParams(e),n={};for(let o of t.keys()){let i=t.get(o);i&&(n[o]=i)}return n}getPrifillParams(e){let t=[],n={...this.getWindowParams()};return window.meetergoSettings?.prefill&&(n={...n,...window.meetergoSettings?.prefill}),n={...n,...e},Object.entries(n).forEach(([o,i])=>{t.push(`${o}=${encodeURIComponent(i)}`)}),t.join("&")}setPrefill(e){window.meetergoSettings.prefill=e}meetergoStyleButton(e){return e.style.margin="0.5rem",e.style.padding="0.8rem",e.style.fontWeight="bold",e.style.color="white",e.style.backgroundColor="#0A64BC",e.style.borderRadius="0.5rem",e.style.border="none",e.style.cursor="pointer",e.style.zIndex="999",e}},l=new r;window.meetergo=l;})();
