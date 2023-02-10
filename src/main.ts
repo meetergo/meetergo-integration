@@ -231,6 +231,7 @@ export class MeetergoIntegration {
     content.style.backgroundColor = 'rgba(0,0,0,0)';
     content.style.borderRadius = '0.7rem';
     content.style.overflow = 'hidden';
+    content.style.padding = '16px';
 
     const button = document.createElement('button');
     button.className = 'close-button';
