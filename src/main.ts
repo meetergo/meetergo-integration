@@ -136,8 +136,9 @@ export class MeetergoIntegration {
   private addListeners(): void {
     const buttons = document.getElementsByClassName('meetergo-modal-button');
     for (const button of buttons) {
-      button.addEventListener('click', () => {
-        const link = button.getAttribute('link');
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const link = button.getAttribute('link') || button.getAttribute('href');
         if (link) {
           this.openModalWithContent({
             link,
