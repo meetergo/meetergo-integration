@@ -66,20 +66,19 @@ export class MeetergoIntegration {
   }
 
   public onFormSubmit(e: SubmitEvent): void {
-    e.preventDefault();
     const target = e.currentTarget as HTMLFormElement;
     if (!target) return;
+
     const targetListener = window.meetergoSettings?.formListeners.find(
       (listener) => {
-        if (!target.id) {
-          return !listener.formId;
-        } else {
-          return target.id === listener.formId;
-        }
+        // Need to define `id`
+        if (!target.id) return false;
+        return target.id === listener.formId;
       }
     );
     if (!targetListener) return;
 
+    e.preventDefault();
     const formData = new FormData(target);
     const data: Record<string, string> = {};
     for (const [key, value] of formData) {
@@ -105,7 +104,7 @@ export class MeetergoIntegration {
       window.meetergoSettings?.floatingButton?.position &&
       window.meetergoSettings?.floatingButton.link
     ) {
-      const position = window.meetergoSettings.floatingButton.position;
+      const position = window.meetergoSettings?.floatingButton.position;
       let button = document.createElement('button');
       button.classList.add('meetergo-modal-button');
       button.innerHTML =
@@ -136,8 +135,9 @@ export class MeetergoIntegration {
   private addListeners(): void {
     const buttons = document.getElementsByClassName('meetergo-modal-button');
     for (const button of buttons) {
-      button.addEventListener('click', () => {
-        const link = button.getAttribute('link');
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const link = button.getAttribute('link') || button.getAttribute('href');
         if (link) {
           this.openModalWithContent({
             link,
@@ -311,7 +311,8 @@ export class MeetergoIntegration {
     for (const anchor of anchors) {
       const iframe = document.createElement('iframe');
 
-      const link = anchor.getAttribute('link') ?? '';
+      const link =
+        (anchor.getAttribute('link') || anchor.getAttribute('href')) ?? '';
       iframe.setAttribute('src', `${link}?${params}`);
       iframe.style.width = '100%';
       iframe.style.height = '100%';
@@ -363,7 +364,9 @@ export class MeetergoIntegration {
   }
 
   public setPrefill(prefill: MeetergoSettings['prefill']): void {
-    window.meetergoSettings.prefill = prefill;
+    if (window.meetergoSettings) {
+      window.meetergoSettings.prefill = prefill;
+    }
   }
 
   private meetergoStyleButton(button: HTMLButtonElement): HTMLButtonElement {
