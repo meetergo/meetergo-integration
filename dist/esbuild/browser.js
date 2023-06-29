@@ -1,4 +1,4 @@
-(()=>{var r=class{constructor(){window.addEventListener("DOMContentLoaded",()=>{this.init()})}init(){this.listenToForms(),this.addFloatingButton(),this.addModal(),this.parseIframes(),this.parseButtons(),this.addListeners(),this.addGeneralCss()}addGeneralCss(){let e=document.createElement("style");e.textContent=`
+(()=>{var r=class{constructor(){document&&(document.readyState==="complete"||document.readyState==="interactive")?this.init():window.addEventListener("DOMContentLoaded",()=>{this.init()})}init(){this.listenToForms(),this.addFloatingButton(),this.addModal(),this.parseIframes(),this.parseButtons(),this.addListeners(),this.addGeneralCss()}addGeneralCss(){let e=document.createElement("style");e.textContent=`
     .close-button {
       all: unset;
       position: absolute;
