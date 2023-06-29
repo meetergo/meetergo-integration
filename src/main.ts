@@ -2,9 +2,18 @@ import { MeetergoSettings } from './declarations';
 
 export class MeetergoIntegration {
   constructor() {
-    window.addEventListener('DOMContentLoaded', () => {
+    const documentIsLoaded =
+      document &&
+      (document.readyState === 'complete' ||
+        document.readyState === 'interactive');
+
+    if (documentIsLoaded) {
       this.init();
-    });
+    } else {
+      window.addEventListener('DOMContentLoaded', () => {
+        this.init();
+      });
+    }
   }
 
   public init(): void {
