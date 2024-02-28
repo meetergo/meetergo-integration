@@ -1,16 +1,16 @@
-import { MeetergoSettings } from './declarations';
+import { MeetergoSettings } from "./declarations";
 
 export class MeetergoIntegration {
   constructor() {
     const documentIsLoaded =
       document &&
-      (document.readyState === 'complete' ||
-        document.readyState === 'interactive');
+      (document.readyState === "complete" ||
+        document.readyState === "interactive");
 
     if (documentIsLoaded) {
       this.init();
     } else {
-      window.addEventListener('DOMContentLoaded', () => {
+      window.addEventListener("DOMContentLoaded", () => {
         this.init();
       });
     }
@@ -27,7 +27,7 @@ export class MeetergoIntegration {
   }
 
   private addGeneralCss() {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = /*css*/ `
     .close-button {
       all: unset;
@@ -61,7 +61,7 @@ export class MeetergoIntegration {
       box-sizing: border-box;
       animation: rotation 1s linear infinite;
     }
-  
+
     @keyframes rotation {
       0% {
           transform: rotate(0deg);
@@ -83,7 +83,7 @@ export class MeetergoIntegration {
         // Need to define `id`
         if (!target.id) return false;
         return target.id === listener.formId;
-      }
+      },
     );
     if (!targetListener) return;
 
@@ -100,10 +100,10 @@ export class MeetergoIntegration {
   }
 
   private listenToForms(): void {
-    const forms = document.querySelectorAll('form');
+    const forms = document.querySelectorAll("form");
 
     for (const form of forms) {
-      form.addEventListener('submit', this.onFormSubmit, false);
+      form.addEventListener("submit", this.onFormSubmit, false);
     }
   }
 
@@ -114,21 +114,21 @@ export class MeetergoIntegration {
       window.meetergoSettings?.floatingButton.link
     ) {
       const position = window.meetergoSettings?.floatingButton.position;
-      let button = document.createElement('button');
-      button.classList.add('meetergo-modal-button');
+      let button = document.createElement("button");
+      button.classList.add("meetergo-modal-button");
       button.innerHTML =
-        window.meetergoSettings?.floatingButton?.text ?? 'Book appointment';
+        window.meetergoSettings?.floatingButton?.text ?? "Book appointment";
 
-      button.setAttribute('link', window.meetergoSettings.floatingButton.link);
+      button.setAttribute("link", window.meetergoSettings.floatingButton.link);
 
       // CSS
-      button.style.position = 'fixed';
-      position.includes('top')
-        ? (button.style.top = '0')
-        : (button.style.bottom = '0');
-      position.includes('left')
-        ? (button.style.left = '0')
-        : (button.style.right = '0');
+      button.style.position = "fixed";
+      position.includes("top")
+        ? (button.style.top = "0")
+        : (button.style.bottom = "0");
+      position.includes("left")
+        ? (button.style.left = "0")
+        : (button.style.right = "0");
       button = this.meetergoStyleButton(button);
 
       if (window.meetergoSettings?.floatingButton.backgroundColor)
@@ -142,11 +142,11 @@ export class MeetergoIntegration {
   }
 
   private addListeners(): void {
-    const buttons = document.getElementsByClassName('meetergo-modal-button');
+    const buttons = document.getElementsByClassName("meetergo-modal-button");
     for (const button of buttons) {
-      button.addEventListener('click', (e) => {
+      button.addEventListener("click", (e) => {
         e.preventDefault();
-        const link = button.getAttribute('link') || button.getAttribute('href');
+        const link = button.getAttribute("link") || button.getAttribute("href");
         if (link) {
           this.openModalWithContent({
             link,
@@ -161,19 +161,21 @@ export class MeetergoIntegration {
         data: any;
       };
       switch (meetergoEvent.event) {
-        case 'open-modal': {
+        case "open-modal": {
+          const iframeParams: Record<string, string> =
+            this.getParamsFromMainIframe();
           const data = meetergoEvent.data as {
             link: string;
             params: Record<string, string>;
           };
-
+          console.log({ ...data.params, ...iframeParams });
           this.openModalWithContent({
             link: data.link,
-            existingParams: data.params,
+            existingParams: { ...data.params, ...iframeParams },
           });
           break;
         }
-        case 'close-modal': {
+        case "close-modal": {
           window.meetergo.closeModal();
           break;
         }
@@ -181,19 +183,35 @@ export class MeetergoIntegration {
     };
   }
 
+  public getParamsFromMainIframe(): Record<string, string> {
+    const iframeParams: Record<string, string> = {};
+    const divIframe: Element | null =
+      document.querySelector(".meetergo-iframe");
+    if (divIframe) {
+      const linkAttr: string | null = divIframe.getAttribute("link");
+      if (linkAttr) {
+        const urlParams = new URLSearchParams(linkAttr.split("?")[1]);
+        urlParams.forEach((value, key) => {
+          iframeParams[key] = value;
+        });
+      }
+    }
+    return iframeParams;
+  }
+
   public openModalWithContent(settings: {
     link: string;
     existingParams?: Record<string, string>;
   }): void {
     const { link, existingParams } = settings;
-    const iframe = document.createElement('iframe');
-    iframe.name = 'meetergo-embedded-modal';
+    const iframe = document.createElement("iframe");
+    iframe.name = "meetergo-embedded-modal";
     const params = this.getPrifillParams(existingParams);
-    iframe.setAttribute('src', `${link}?${params}`);
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.style.border = 'none';
-    const modalContent = document.getElementById('meetergo-modal-content');
+    iframe.setAttribute("src", `${link}?${params}`);
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "none";
+    const modalContent = document.getElementById("meetergo-modal-content");
     if (modalContent) {
       modalContent.replaceChildren(iframe);
     }
@@ -201,50 +219,50 @@ export class MeetergoIntegration {
   }
 
   private addModal(): void {
-    const modal = document.createElement('div');
-    modal.id = 'meetergo-modal';
-    modal.style.zIndex = '999999';
-    modal.style.position = 'fixed';
-    modal.style.transition = 'visibility 0s linear 0.1s,opacity 0.3s ease';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100%';
-    modal.style.height = '100%';
-    modal.style.display = 'flex';
-    modal.style.justifyContent = 'center';
-    modal.style.alignItems = 'center';
-    modal.style.visibility = 'hidden';
-    modal.style.opacity = '0';
+    const modal = document.createElement("div");
+    modal.id = "meetergo-modal";
+    modal.style.zIndex = "999999";
+    modal.style.position = "fixed";
+    modal.style.transition = "visibility 0s linear 0.1s,opacity 0.3s ease";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100%";
+    modal.style.height = "100%";
+    modal.style.display = "flex";
+    modal.style.justifyContent = "center";
+    modal.style.alignItems = "center";
+    modal.style.visibility = "hidden";
+    modal.style.opacity = "0";
 
-    const overlay = document.createElement('div');
-    overlay.style.zIndex = '1001';
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.backgroundColor = 'rgba(0,0,0,0.6)';
+    const overlay = document.createElement("div");
+    overlay.style.zIndex = "1001";
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
 
-    const spinner = document.createElement('div');
-    spinner.className = 'meetergo-spinner';
-    spinner.style.zIndex = '1002';
+    const spinner = document.createElement("div");
+    spinner.className = "meetergo-spinner";
+    spinner.style.zIndex = "1002";
 
     overlay.onclick = () => window.meetergo.closeModal();
 
-    const content = document.createElement('div');
-    content.id = 'meetergo-modal-content';
-    content.style.zIndex = '1003';
-    content.style.position = 'relative';
-    content.style.width = '100%';
-    content.style.height = '100%';
-    content.style.backgroundColor = 'rgba(0,0,0,0)';
-    content.style.borderRadius = '0.7rem';
-    content.style.overflow = 'hidden';
-    content.style.padding = '16px';
+    const content = document.createElement("div");
+    content.id = "meetergo-modal-content";
+    content.style.zIndex = "1003";
+    content.style.position = "relative";
+    content.style.width = "100%";
+    content.style.height = "100%";
+    content.style.backgroundColor = "rgba(0,0,0,0)";
+    content.style.borderRadius = "0.7rem";
+    content.style.overflow = "hidden";
+    content.style.padding = "16px";
 
-    const button = document.createElement('button');
-    button.className = 'close-button';
-    button.style.zIndex = '1004';
+    const button = document.createElement("button");
+    button.className = "close-button";
+    button.style.zIndex = "1004";
     button.onclick = () => window.meetergo.closeModal();
     button.innerHTML = /*html*/ `<svg
       stroke="currentColor"
@@ -269,44 +287,44 @@ export class MeetergoIntegration {
   }
 
   public openModal(): void {
-    const modal = document.getElementById('meetergo-modal');
+    const modal = document.getElementById("meetergo-modal");
     if (modal) {
-      modal.style.visibility = 'visible';
-      modal.style.opacity = '1';
+      modal.style.visibility = "visible";
+      modal.style.opacity = "1";
 
-      const buttons = modal.getElementsByClassName('meetergo-spinner');
+      const buttons = modal.getElementsByClassName("meetergo-spinner");
 
       if (buttons.length > 0) {
         const [button] = buttons;
 
         if (button instanceof HTMLElement) {
-          button.style.visibility = 'visible';
-          button.style.opacity = '1';
+          button.style.visibility = "visible";
+          button.style.opacity = "1";
         }
       }
     }
   }
 
   public closeModal(preventClearContent?: boolean): void {
-    const modal = document.getElementById('meetergo-modal');
+    const modal = document.getElementById("meetergo-modal");
     if (modal) {
       // Hide Modal
-      modal.style.visibility = 'hidden';
-      modal.style.opacity = '0';
-      const buttons = modal.getElementsByClassName('meetergo-spinner');
+      modal.style.visibility = "hidden";
+      modal.style.opacity = "0";
+      const buttons = modal.getElementsByClassName("meetergo-spinner");
 
       if (buttons.length > 0) {
         const [button] = buttons;
 
         if (button instanceof HTMLElement) {
-          button.style.visibility = 'hidden';
-          button.style.opacity = '0';
+          button.style.visibility = "hidden";
+          button.style.opacity = "0";
         }
       }
 
       if (!preventClearContent) {
         // Clear modal content
-        const content = document.getElementById('meetergo-modal-content');
+        const content = document.getElementById("meetergo-modal-content");
         if (content) {
           content.replaceChildren();
         }
@@ -315,24 +333,24 @@ export class MeetergoIntegration {
   }
 
   public parseIframes(): void {
-    const anchors = document.getElementsByClassName('meetergo-iframe');
+    const anchors = document.getElementsByClassName("meetergo-iframe");
     const params = this.getPrifillParams();
     for (const anchor of anchors) {
-      const iframe = document.createElement('iframe');
+      const iframe = document.createElement("iframe");
 
       const link =
-        (anchor.getAttribute('link') || anchor.getAttribute('href')) ?? '';
-      iframe.setAttribute('src', `${link}?${params}`);
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
-      iframe.style.border = 'none';
-      iframe.style.minHeight = '690px';
+        (anchor.getAttribute("link") || anchor.getAttribute("href")) ?? "";
+      iframe.setAttribute("src", `${link}?${params}`);
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      iframe.style.minHeight = "690px";
       anchor.replaceChildren(iframe);
     }
   }
 
   public parseButtons(): void {
-    const buttons = document.getElementsByClassName('meetergo-styled-button');
+    const buttons = document.getElementsByClassName("meetergo-styled-button");
 
     for (let button of buttons) {
       button = this.meetergoStyleButton(button as HTMLButtonElement);
@@ -369,25 +387,25 @@ export class MeetergoIntegration {
     Object.entries(prefill).forEach(([key, value]) => {
       params.push(`${key}=${encodeURIComponent(value)}`);
     });
-    return params.join('&');
+    return params.join("&");
   }
 
-  public setPrefill(prefill: MeetergoSettings['prefill']): void {
+  public setPrefill(prefill: MeetergoSettings["prefill"]): void {
     if (window.meetergoSettings) {
       window.meetergoSettings.prefill = prefill;
     }
   }
 
   private meetergoStyleButton(button: HTMLButtonElement): HTMLButtonElement {
-    button.style.margin = '0.5rem';
-    button.style.padding = '0.8rem';
-    button.style.fontWeight = 'bold';
-    button.style.color = 'white';
-    button.style.backgroundColor = '#0A64BC';
-    button.style.borderRadius = '0.5rem';
-    button.style.border = 'none';
-    button.style.cursor = 'pointer';
-    button.style.zIndex = '999';
+    button.style.margin = "0.5rem";
+    button.style.padding = "0.8rem";
+    button.style.fontWeight = "bold";
+    button.style.color = "white";
+    button.style.backgroundColor = "#0A64BC";
+    button.style.borderRadius = "0.5rem";
+    button.style.border = "none";
+    button.style.cursor = "pointer";
+    button.style.zIndex = "999";
 
     return button;
   }
