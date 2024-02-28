@@ -168,7 +168,6 @@ export class MeetergoIntegration {
             link: string;
             params: Record<string, string>;
           };
-          console.log({ ...data.params, ...iframeParams });
           this.openModalWithContent({
             link: data.link,
             existingParams: { ...data.params, ...iframeParams },
