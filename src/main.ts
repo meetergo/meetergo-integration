@@ -184,15 +184,18 @@ export class MeetergoIntegration {
 
   public getParamsFromMainIframe(): Record<string, string> {
     const iframeParams: Record<string, string> = {};
-    const divIframe: Element | null =
+    const divIframe: HTMLElement | null =
       document.querySelector('.meetergo-iframe');
     if (divIframe) {
-      const linkAttr: string | null = divIframe.getAttribute('link');
+      const linkAttr = divIframe.getAttribute('link');
       if (linkAttr) {
-        const urlParams = new URLSearchParams(linkAttr.split('?')[1]);
-        urlParams.forEach((value, key) => {
-          iframeParams[key] = value;
-        });
+        const queryString = linkAttr.split('?')[1];
+        if (queryString) {
+          const urlParams = new URLSearchParams(queryString);
+          urlParams.forEach((value, key) => {
+            iframeParams[key] = value;
+          });
+        }
       }
     }
     return iframeParams;
