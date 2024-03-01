@@ -162,8 +162,7 @@ export class MeetergoIntegration {
       };
       switch (meetergoEvent.event) {
         case 'open-modal': {
-          const iframeParams: Record<string, string> =
-            this.getParamsFromMainIframe();
+          const iframeParams = this.getParamsFromMainIframe();
           const data = meetergoEvent.data as {
             link: string;
             params: Record<string, string>;
