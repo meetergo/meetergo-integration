@@ -61,7 +61,7 @@ export class MeetergoIntegration {
       box-sizing: border-box;
       animation: rotation 1s linear infinite;
     }
-  
+
     @keyframes rotation {
       0% {
           transform: rotate(0deg);
@@ -83,7 +83,7 @@ export class MeetergoIntegration {
         // Need to define `id`
         if (!target.id) return false;
         return target.id === listener.formId;
-      }
+      },
     );
     if (!targetListener) return;
 
@@ -162,14 +162,14 @@ export class MeetergoIntegration {
       };
       switch (meetergoEvent.event) {
         case 'open-modal': {
+          const iframeParams = this.getParamsFromMainIframe();
           const data = meetergoEvent.data as {
             link: string;
             params: Record<string, string>;
           };
-
           this.openModalWithContent({
             link: data.link,
-            existingParams: data.params,
+            existingParams: { ...data.params, ...iframeParams },
           });
           break;
         }
@@ -179,6 +179,25 @@ export class MeetergoIntegration {
         }
       }
     };
+  }
+
+  public getParamsFromMainIframe(): Record<string, string> {
+    const iframeParams: Record<string, string> = {};
+    const divIframe: HTMLElement | null =
+      document.querySelector('.meetergo-iframe');
+    if (divIframe) {
+      const linkAttr = divIframe.getAttribute('link');
+      if (linkAttr) {
+        const queryString = linkAttr.split('?')[1];
+        if (queryString) {
+          const urlParams = new URLSearchParams(queryString);
+          urlParams.forEach((value, key) => {
+            iframeParams[key] = value;
+          });
+        }
+      }
+    }
+    return iframeParams;
   }
 
   public openModalWithContent(settings: {
