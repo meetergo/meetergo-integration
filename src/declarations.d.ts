@@ -16,6 +16,7 @@ type MeetergoSettings = {
   };
   prefill?: Record<string, string>;
   formListeners: FormListener[];
+  disableModal?: boolean;
 };
 
 declare global {

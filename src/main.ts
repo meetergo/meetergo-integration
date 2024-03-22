@@ -204,6 +204,9 @@ export class MeetergoIntegration {
     link: string;
     existingParams?: Record<string, string>;
   }): void {
+    if (window.meetergoSettings?.disableModal) {
+      return;
+    }
     const { link, existingParams } = settings;
     const iframe = document.createElement('iframe');
     iframe.name = 'meetergo-embedded-modal';
