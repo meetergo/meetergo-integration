@@ -158,7 +158,7 @@ export class MeetergoIntegration {
     window.onmessage = (e) => {
       const meetergoEvent = e.data as {
         event: string;
-        data: any;
+        data: unknown;
       };
       switch (meetergoEvent.event) {
         case 'open-modal': {
@@ -175,6 +175,11 @@ export class MeetergoIntegration {
         }
         case 'close-modal': {
           window.meetergo.closeModal();
+          break;
+        }
+        case 'booking-complete': {
+          window.meetergoSettings.onSuccess &&
+            window.meetergoSettings.onSuccess(meetergoEvent.data as string);
           break;
         }
       }

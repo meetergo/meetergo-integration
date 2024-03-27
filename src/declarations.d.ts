@@ -17,6 +17,7 @@ type MeetergoSettings = {
   prefill?: Record<string, string>;
   formListeners: FormListener[];
   disableModal?: boolean;
+  onSuccess?: (appointmentId: string) => void;
 };
 
 declare global {
