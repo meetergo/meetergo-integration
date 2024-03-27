@@ -18,6 +18,7 @@ type MeetergoSettings = {
   formListeners: FormListener[];
   disableModal?: boolean;
   onSuccess?: (appointmentId: string) => void;
+  enableAutoResize?: boolean;
 };
 
 declare global {

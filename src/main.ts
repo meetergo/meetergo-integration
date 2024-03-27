@@ -182,6 +182,20 @@ export class MeetergoIntegration {
             window.meetergoSettings.onSuccess(meetergoEvent.data as string);
           break;
         }
+        case "embed-resize": {
+          if (!window.meetergoSettings?.enableAutoResize) break;
+          
+          const iframe = document.querySelector(
+            ".meetergo-iframe iframe"
+          ) as HTMLElement | null;
+          const data = meetergoEvent.data as {
+            height: number; // height in px
+          };
+
+          if (!iframe) break;
+          iframe.style.height = `${data.height}px`;
+          break;
+        }
       }
     };
   }
