@@ -418,15 +418,6 @@ export class MeetergoIntegration {
 
     return button;
   }
-
-  private postScrollHeightToParent(scrollHeight: number): void {
-    window.parent.postMessage({ scrollHeight: scrollHeight }, "*");
-  }
-  
-  public sendScrollHeightToParent(): void {
-    const scrollHeight = document.body.scrollHeight;
-    this.postScrollHeightToParent(scrollHeight);
-  }
 }
 
 export const meetergo = new MeetergoIntegration();
