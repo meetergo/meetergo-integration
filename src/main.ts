@@ -139,7 +139,10 @@ export class MeetergoIntegration {
     for (const button of buttons) {
       button.addEventListener("click", e => {
         e.preventDefault();
-        const link = button.getAttribute("link") || button.getAttribute("href");
+        const link =
+          button.getAttribute("link") ||
+          button.getAttribute("href") ||
+          button.getAttribute("data-url");
         if (link) {
           this.openModalWithContent({
             link,
@@ -197,7 +200,10 @@ export class MeetergoIntegration {
     const iframeParams: Record<string, string> = {};
     const divIframe: HTMLElement | null = document.querySelector(".meetergo-iframe");
     if (divIframe) {
-      const linkAttr = divIframe.getAttribute("link");
+      const linkAttr =
+        divIframe.getAttribute("link") ||
+        divIframe.getAttribute("href") ||
+        divIframe.getAttribute("data-url");
       if (linkAttr) {
         const queryString = linkAttr.split("?")[1];
         if (queryString) {
@@ -353,7 +359,11 @@ export class MeetergoIntegration {
     for (const anchor of anchors) {
       const iframe = document.createElement("iframe");
 
-      const link = (anchor.getAttribute("link") || anchor.getAttribute("href")) ?? "";
+      const link =
+        (anchor.getAttribute("link") ||
+          anchor.getAttribute("href") ||
+          anchor.getAttribute("data-url")) ??
+        "";
       iframe.setAttribute("src", `${link}?${params}`);
       iframe.style.width = "100%";
       iframe.style.height = "100%";
