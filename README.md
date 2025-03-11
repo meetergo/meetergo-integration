@@ -1,11 +1,10 @@
-# meetergo page integration
+# meetergo Page Integration
 
-Add meetergo iframes or booking buttons with modals
-Prefill customer information
+Easily integrate meetergo scheduling into your website with iframes, booking buttons with modals, and form integrations.
 
 ## Getting Started
 
-Set meetergo settings and load script in the head of your page
+Set meetergo settings and load the script in the head of your page:
 
 ```html
 <script>
@@ -14,13 +13,24 @@ Set meetergo settings and load script in the head of your page
     floatingButton: {
       position: "bottom-right",
       link: "my.meetergo.com/book/my-booking-link",
+      text: "Book Appointment",
+      icon: "CalendarPlus", // Optional Lucide icon
+      animation: "pulse", // Optional animation
+      backgroundColor: "#0A64BC", // Optional custom color
+      textColor: "#FFFFFF", // Optional custom text color
     },
     prefill: {
       firstname: "John",
-      lastname: "smith",
+      lastname: "Smith",
       email: "tester@testing.com",
       phone: "0121196862",
     },
+    formListeners: [
+      {
+        formId: "contact-form", // ID of the form to listen to
+        link: "my.meetergo.com/book/my-booking-link", // Booking link to open when form submitted
+      },
+    ],
   };
 </script>
 <script
@@ -29,55 +39,233 @@ Set meetergo settings and load script in the head of your page
 ></script>
 ```
 
-You can add booking iframe like so. just specify a booking link
+## Integration Methods
+
+### Iframe Embedding
+
+Add a booking iframe to your page by specifying a booking link:
 
 ```html
 <div class="meetergo-iframe" link="my.meetergo.com/my-booking-link"></div>
 ```
 
-To make element open a booking modal simply give it give it `meetergo-modal-button` class.
-You can also specify `link` just like for iframes.
+### Modal Booking Buttons
 
-## Prefilling customer information
+To make any element open a booking modal, give it the `meetergo-modal-button` class and specify a link:
 
-You can prefill customer information with `window.meetergo.setPrefill` function.
-Pass the following as param. Or you can set it directly on `window.meetergoSettings.prefill`.
+```html
+<button class="meetergo-modal-button" link="my.meetergo.com/my-booking-link">
+  Book Now
+</button>
+```
 
-```typescript
-{
-    firstname?: string | undefined;
-    lastname?: string | undefined;
-    email?: string | undefined;
-    note?: string | undefined;
-    phone?: string | undefined;
-    country?: string | undefined;
-    addressLine1?: string | undefined;
-    addressLine2?: string | undefined;
-    city?: string | undefined;
-    postalCode?: string | undefined;
-    vatNumber?: string | undefined;
+### Styled Buttons
+
+Add the `meetergo-styled-button` class to automatically style your booking buttons:
+
+```html
+<button
+  class="meetergo-styled-button meetergo-modal-button"
+  link="my.meetergo.com/my-booking-link"
+>
+  Book Appointment
+</button>
+```
+
+### Floating Button
+
+Customize the floating button with the following options:
+
+```javascript
+floatingButton: {
+  position: "bottom-right", // Options: top-left, top-center, top-right, middle-left, middle-center, middle-right, bottom-left, bottom-center, bottom-right
+  link: "my.meetergo.com/book/my-booking-link",
+  text: "Book Appointment", // Button text
+  icon: "CalendarPlus", // See available icons below
+  animation: "pulse", // Options: none, pulse, bounce, slide-in
+  backgroundColor: "#0A64BC", // Custom background color
+  textColor: "#FFFFFF" // Custom text color
+}
+```
+
+### Collapsible Sidebar
+
+Add a collapsible sidebar with an iframe that slides in from the edge of the screen. The sidebar includes a stylish toggle button that sticks to the edge of the screen and a close button within the sidebar.
+
+```javascript
+sidebar: {
+  position: "right", // Options: left, right
+  width: "400px", // Width of the sidebar
+  link: "my.meetergo.com/book/my-booking-link", // Booking link to display in the sidebar
+  buttonText: "Open Scheduler", // Text for the toggle button (optional, can be omitted for icon-only)
+  buttonIcon: "calendar", // Icon for the toggle button (optional, can be omitted for text-only)
+  buttonPosition: "middle-right", // Position of the toggle button (top, middle, bottom + left/right)
+  backgroundColor: "#0A64BC", // Custom button background color
+  textColor: "#FFFFFF" // Custom button text color
+}
+```
+
+#### Sidebar Button Configuration
+
+- **Text, Icon, or Both**: You can use just text (`buttonText`), just an icon (`buttonIcon`), or both together.
+- **Edge Placement**: The button automatically attaches to the edge of the screen on the specified side.
+- **Visibility**: The button automatically hides when the sidebar is open and reappears when closed.
+
+Available animations:
+
+- `none` - No animation
+- `pulse` - Subtle pulsing effect
+- `bounce` - Bouncing effect
+- `slide-in` - Slides in from the edge based on button position
+
+Available icon options:
+
+- `CalendarPlus`
+- `CalendarPlus2`
+- `Calendar`
+- `Clock`
+- `User`
+- `Video`
+- `Mail`
+- `Phone`
+- `MessageSquare`
+- `Coffee`
+- `Users`
+- `Briefcase`
+- `Heart`
+- `Star`
+- `BookOpen`
+- `PenTool`
+
+### Form Integration
+
+You can integrate with forms so that when a form is submitted, a booking modal opens with form data pre-filled:
+
+```javascript
+formListeners: [
+  {
+    formId: "contact-form", // ID of the form to listen to
+    link: "my.meetergo.com/book/my-booking-link", // Booking link to open
+  },
+];
+```
+
+## JavaScript API
+
+### Prefilling Customer Information
+
+You can prefill customer information with the `window.meetergo.setPrefill()` function or set it directly on `window.meetergoSettings.prefill`:
+
+```javascript
+window.meetergo.setPrefill({
+  firstname: "John",
+  lastname: "Smith",
+  email: "john@example.com",
+  phone: "123456789",
+  note: "Some additional information",
+  country: "US",
+  addressLine1: "123 Main St",
+  addressLine2: "Apt 4B",
+  city: "New York",
+  postalCode: "10001",
+  vatNumber: "VAT12345",
+});
+```
+
+### Binding DOM Elements
+
+Programmatically bind any DOM element to the scheduler:
+
+```javascript
+const element = document.getElementById("my-booking-button");
+window.meetergo.bindElementToScheduler(
+  element,
+  "my.meetergo.com/my-booking-link",
+  {
+    params: { firstname: "John", email: "john@example.com" },
+    removeExistingListeners: true,
   }
+);
 ```
 
-Note: Information has to be prefilled before opening the modal or loading the iframes.
-You can reload the iframes with `window.meetergo.parseIframes`
+### Unbinding DOM Elements
 
-## I don't like this. How do I do integrate meetergo manually?
+Remove meetergo scheduler binding from an element:
 
-Simply make an iframe with with a booking link as src. Make sure to remove borders etc. to make it look nice.
-
-You can set these as query params on any link to prefill customer information
-
-```typescript
-    firstname?: string | undefined;
-    lastname?: string | undefined;
-    email?: string | undefined;
-    note?: string | undefined;
-    phone?: string | undefined;
-    country?: string | undefined;
-    addressLine1?: string | undefined;
-    addressLine2?: string | undefined;
-    city?: string | undefined;
-    postalCode?: string | undefined;
-    vatNumber?: string | undefined;
+```javascript
+const element = document.getElementById("my-booking-button");
+window.meetergo.unbindElementFromScheduler(element);
 ```
+
+### Launching the Scheduler Programmatically
+
+Launch the scheduler modal from your JavaScript code:
+
+```javascript
+// Use default link from settings
+window.meetergo.launchScheduler();
+
+// Or specify a custom link and parameters
+window.meetergo.launchScheduler("my.meetergo.com/my-booking-link", {
+  firstname: "John",
+  email: "john@example.com",
+});
+```
+
+### Modal Management
+
+Control the modal directly:
+
+```javascript
+// Open the modal
+window.meetergo.openModal();
+
+// Close the modal
+window.meetergo.closeModal();
+
+// Open modal with specific content
+window.meetergo.openModalWithContent({
+  link: "my.meetergo.com/my-booking-link",
+  existingParams: { firstname: "John" },
+});
+```
+
+### Other Utilities
+
+```javascript
+// Refresh iframes after changing prefill data
+window.meetergo.parseIframes();
+
+// Refresh buttons after DOM changes
+window.meetergo.parseButtons();
+
+// For embedded iframes: send height to parent page
+window.meetergo.sendScrollHeightToParent();
+```
+
+## Manual Integration
+
+If you prefer to manually integrate meetergo:
+
+1. Create an iframe with the booking link as the src:
+
+```html
+<iframe
+  src="my.meetergo.com/my-booking-link?firstname=John&email=john@example.com"
+  style="width: 100%; height: 700px; border: none;"
+></iframe>
+```
+
+2. You can add the following query parameters to prefill customer information:
+
+- firstname
+- lastname
+- email
+- note
+- phone
+- country
+- addressLine1
+- addressLine2
+- city
+- postalCode
+- vatNumber
