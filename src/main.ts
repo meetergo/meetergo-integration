@@ -1029,9 +1029,15 @@ export class MeetergoIntegration {
           loadingIndicator.style.left = "50%";
           loadingIndicator.style.transform = "translate(-50%, -50%)";
 
+          const indicatorId = `meetergo-spinner-${Math.random()
+            .toString(36)
+            .substring(2, 11)}`;
+          loadingIndicator.id = indicatorId;
+
           iframe.addEventListener("load", () => {
-            if (loadingIndicator.parentNode) {
-              loadingIndicator.parentNode.removeChild(loadingIndicator);
+            const spinner = document.getElementById(indicatorId);
+            if (spinner && spinner.parentNode) {
+              spinner.parentNode.removeChild(spinner);
             }
           });
 
