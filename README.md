@@ -14,10 +14,10 @@ Set meetergo settings and load the script in the head of your page:
       position: "bottom-right",
       link: "my.meetergo.com/book/my-booking-link",
       text: "Book Appointment",
-      icon: "CalendarPlus", // Optional Lucide icon
-      animation: "pulse", // Optional animation
-      backgroundColor: "#0A64BC", // Optional custom color
-      textColor: "#FFFFFF", // Optional custom text color
+      icon: "CalendarPlus", // Optional
+      animation: "pulse", // Optional
+      backgroundColor: "#0A64BC", // Optional
+      textColor: "#FFFFFF", // Optional
     },
     prefill: {
       firstname: "John",
@@ -35,7 +35,7 @@ Set meetergo settings and load the script in the head of your page:
 </script>
 <script
   async
-  src="https://cdn.jsdelivr.net/gh/meetergo/meetergo-integration/dist/esbuild/browser.js"
+  src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v2.js"
 ></script>
 ```
 
@@ -178,14 +178,10 @@ Programmatically bind any DOM element to the scheduler:
 
 ```javascript
 const element = document.getElementById("my-booking-button");
-window.meetergo.bindElementToScheduler(
-  element,
-  "my.meetergo.com/my-booking-link",
-  {
-    params: { firstname: "John", email: "john@example.com" },
-    removeExistingListeners: true,
-  }
-);
+window.meetergo.bindElementToScheduler(element, "my.meetergo.com/my-booking-link", {
+  params: { firstname: "John", email: "john@example.com" },
+  removeExistingListeners: true,
+});
 ```
 
 ### Unbinding DOM Elements
