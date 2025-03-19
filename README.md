@@ -105,6 +105,34 @@ sidebar: {
 }
 ```
 
+### Video Embed
+
+Add an interactive video widget that expands to show booking options. Configure using these options:
+
+```javascript
+videoEmbed: {
+  videoSrc: "https://example.com/promo-video.mp4", // Required - Video URL (MP4 or HLS)
+  bookingLink: "my.meetergo.com/book/my-booking-link", // Required - Booking link
+  posterImage: "https://example.com/poster.jpg", // Optional - Preview image
+  position: "bottom-right", // Options: top/bottom/middle + left/right/center
+  buttonColor: "#0A64BC", // Border and CTA button color
+  bookingCta: "Schedule Consultation", // CTA text
+  size: { width: "200px", height: "158px" }, // Initial size
+  isRound: true, // Circular vs rectangular shape
+  bookingCtaColor: "#FFFFFF" // CTA text color
+}
+```
+
+**Features:**
+
+- Click to expand from compact view to full video player
+- Built-in video controls (pause/play, mute, progress bar)
+- Booking CTA button that opens scheduling modal
+- Hover effects and smooth animations
+- Automatic fallback to poster image if video fails to load
+- Position customization (9 possible positions)
+- Minimized indicator when closed
+
 #### Sidebar Button Configuration
 
 - **Text, Icon, or Both**: You can use just text (`buttonText`), just an icon (`buttonIcon`), or both together.
@@ -178,10 +206,14 @@ Programmatically bind any DOM element to the scheduler:
 
 ```javascript
 const element = document.getElementById("my-booking-button");
-window.meetergo.bindElementToScheduler(element, "my.meetergo.com/my-booking-link", {
-  params: { firstname: "John", email: "john@example.com" },
-  removeExistingListeners: true,
-});
+window.meetergo.bindElementToScheduler(
+  element,
+  "my.meetergo.com/my-booking-link",
+  {
+    params: { firstname: "John", email: "john@example.com" },
+    removeExistingListeners: true,
+  }
+);
 ```
 
 ### Unbinding DOM Elements
