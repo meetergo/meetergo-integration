@@ -20,7 +20,7 @@
     "sourceMap": true,
     "outDir": "./dist/tsc/",
     "types": ["node", "jest"],
-    "lib": ["ES6", "DOM", "DOM.Iterable"]
+    "lib": ["ES6", "DOM", "DOM.Iterable", "es2019"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "**/*.test.ts"]
