@@ -53,6 +53,7 @@ type MeetergoSettings = {
     videoCta?: string;
     isRound?: boolean;
     buttonColor?: string;
+    offset?: string;
     size?: {
       width?: string;
       height?: string;
@@ -79,6 +80,14 @@ declare global {
   interface Window {
     meetergo: MeetergoIntegration;
     meetergoSettings: MeetergoSettings;
+    Hls?: {
+      isSupported(): boolean;
+      Events: {
+        MANIFEST_PARSED: string;
+        ERROR: string;
+      };
+      new (): HlsInstance;
+    };
   }
 
   // Hls.js type declaration
