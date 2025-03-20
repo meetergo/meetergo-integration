@@ -1283,10 +1283,38 @@ export class MeetergoIntegration {
         console.warn("meetergo: Video embed settings missing or incomplete");
         return;
       }
-      this.createVideoEmbed(settings);
+
+      // Ensure HLS.js is loaded before proceeding
+      this.ensureHlsLibraryLoaded()
+        .then(() => {
+          this.createVideoEmbed(settings);
+        })
+        .catch((error) => {
+          console.error("meetergo: Failed to load HLS library", error);
+        });
     } catch (error) {
       console.error("meetergo: Error initializing video embed", error);
     }
+  }
+
+  /**
+   * Ensures HLS.js library is loaded
+   * @returns Promise that resolves when HLS.js is loaded
+   */
+  private ensureHlsLibraryLoaded(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (window.Hls) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/hls.js@latest";
+      script.crossOrigin = "anonymous";
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Failed to load HLS.js"));
+      document.head.appendChild(script);
+    });
   }
 
   /**
@@ -1306,6 +1334,7 @@ export class MeetergoIntegration {
       bookingCta = "Book Appointment",
       size = { width: "200px", height: "158px" },
       isRound = false,
+      offset = "16px", // Added offset with default value
     } = settings;
 
     // Create container for the video
@@ -1342,7 +1371,7 @@ export class MeetergoIntegration {
     }
 
     // Set position
-    this.setPositionStyles(videoContainer, position);
+    this.setPositionStyles(videoContainer, position, offset);
 
     // Create UI elements
     const {
@@ -1352,6 +1381,9 @@ export class MeetergoIntegration {
       loadingIndicator,
       closeButton,
     } = this.createVideoEmbedElements(settings);
+
+    // Make close button always visible
+    closeButton.style.opacity = "1";
 
     // Track expansion state
     let isExpanded = false;
@@ -1542,6 +1574,19 @@ export class MeetergoIntegration {
       }, 1500);
     };
 
+    // Improved hover effect for CTA button
+    ctaButton.addEventListener("mouseenter", () => {
+      ctaButton.style.transform = "translateX(-50%) translateY(-4px)";
+      ctaButton.style.boxShadow = "0 6px 14px rgba(0,0,0,0.3)";
+      ctaButton.style.backgroundColor = this.adjustColor(buttonColor, -20); // Darken the button color
+    });
+
+    ctaButton.addEventListener("mouseleave", () => {
+      ctaButton.style.transform = "translateX(-50%)";
+      ctaButton.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+      ctaButton.style.backgroundColor = buttonColor;
+    });
+
     // Add event handlers with expanded functionality
     videoContainer.addEventListener("click", (e) => {
       if (e.target === closeButton || closeButton.contains(e.target as Node)) {
@@ -1559,9 +1604,11 @@ export class MeetergoIntegration {
         return;
       }
 
-      if (e.target === ctaButton) {
-        // CTA button click opens booking link
-        togglePlayPause();
+      if (e.target === ctaButton || ctaButton.contains(e.target as Node)) {
+        // CTA button click pauses video and opens booking link
+        if (!isVideoPaused) {
+          togglePlayPause(); // Always ensure video is paused when clicking CTA
+        }
         this.openModalWithContent({ link: bookingLink });
         return;
       }
@@ -1655,22 +1702,10 @@ export class MeetergoIntegration {
     // Hover effects
     videoContainer.addEventListener("mouseenter", () => {
       this.applyHoverEffects(videoContainer, ctaElement, closeButton);
-
-      // Add subtle hover effect to CTA button if visible
-      if (isExpanded && ctaButton.style.display === "block") {
-        ctaButton.style.transform = "translateX(-50%) translateY(-2px)";
-        ctaButton.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
-      }
     });
 
     videoContainer.addEventListener("mouseleave", () => {
       this.removeHoverEffects(videoContainer, closeButton);
-
-      // Reset CTA button hover effect
-      if (isExpanded) {
-        ctaButton.style.transform = "translateX(-50%)";
-        ctaButton.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
-      }
     });
 
     // Add accessibility support
@@ -1730,7 +1765,7 @@ export class MeetergoIntegration {
     // Create loading indicator
     const loadingIndicator = this.createLoadingIndicator();
 
-    // Create close button
+    // Create close button - now always visible
     const closeButton = document.createElement("div");
     Object.assign(closeButton.style, {
       position: "absolute",
@@ -1744,10 +1779,9 @@ export class MeetergoIntegration {
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      opacity: "0",
-      transition: "opacity 0.3s ease",
+      opacity: "1", // Changed from 0 to 1 to make always visible
+      transition: "background-color 0.3s ease",
       pointerEvents: "auto",
-
       zIndex: "10",
       padding: "0",
     });
@@ -1815,29 +1849,35 @@ export class MeetergoIntegration {
   }
 
   /**
-   * Sets position styles for the video container
+   * Sets position styles for the video container with offset support
    */
-  private setPositionStyles(container: HTMLElement, position: string): void {
+  private setPositionStyles(
+    container: HTMLElement,
+    position: string,
+    offset = "16px"
+  ): void {
+    const offsetValue = offset || "16px";
+
     // Vertical positioning
     if (position.includes("top")) {
-      container.style.top = "20px";
+      container.style.top = offsetValue;
     } else if (position.includes("middle")) {
       container.style.top = "50%";
       container.style.transform = "translateY(-50%)";
     } else {
-      container.style.bottom = "20px";
+      container.style.bottom = offsetValue;
     }
 
     // Horizontal positioning
     if (position.includes("left")) {
-      container.style.left = "20px";
+      container.style.left = offsetValue;
     } else if (position.includes("center")) {
       container.style.left = "50%";
       container.style.transform = container.style.transform
         ? "translate(-50%, -50%)"
         : "translateX(-50%)";
     } else {
-      container.style.right = "20px";
+      container.style.right = offsetValue;
     }
   }
 
@@ -1865,56 +1905,81 @@ export class MeetergoIntegration {
   }
 
   /**
-   * Sets up HLS video
+   * Helper function to adjust color brightness
+   * @param color Hex color string
+   * @param percent Percentage to lighten (positive) or darken (negative)
    */
+  private adjustColor(color: string, percent: number): string {
+    let R = parseInt(color.substring(1, 3), 16);
+    let G = parseInt(color.substring(3, 5), 16);
+    let B = parseInt(color.substring(5, 7), 16);
+
+    R = Math.max(0, Math.min(255, R + Math.round((R * percent) / 100)));
+    G = Math.max(0, Math.min(255, G + Math.round((G * percent) / 100)));
+    B = Math.max(0, Math.min(255, B + Math.round((B * percent) / 100)));
+
+    const RR = R.toString(16).padStart(2, "0");
+    const GG = G.toString(16).padStart(2, "0");
+    const BB = B.toString(16).padStart(2, "0");
+
+    return `#${RR}${GG}${BB}`;
+  }
+
   private setupHlsVideo(
-    video: HTMLVideoElement,
+    videoElement: HTMLVideoElement,
     videoSrc: string,
-    posterImage: string,
-    loadingIndicator: HTMLElement
+    posterUrl: string | undefined,
+    container: HTMLElement
   ): void {
-    if (typeof Hls !== "undefined") {
-      this.initHlsPlayer(video, videoSrc, posterImage, loadingIndicator);
+    // Ensure we're using HTTPS for all resources
+    const secureVideoSrc = videoSrc.replace(/^http:/, "https:");
+
+    if (window.Hls && window.Hls.isSupported()) {
+      this.initHlsPlayer(videoElement, secureVideoSrc, posterUrl, container);
+    } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
+      // For Safari which has native HLS support
+      videoElement.src = secureVideoSrc;
+      if (posterUrl) videoElement.poster = posterUrl;
+      videoElement.addEventListener("loadedmetadata", () => {
+        videoElement.play().catch(() => {
+          this.fallbackToPoster(videoElement, container);
+        });
+      });
+      videoElement.addEventListener("error", () => {
+        this.fallbackToPoster(videoElement, container);
+      });
     } else {
-      const hlsScript = document.createElement("script");
-      hlsScript.src = "https://cdn.jsdelivr.net/npm/hls.js@latest";
-      hlsScript.onload = () =>
-        this.initHlsPlayer(video, videoSrc, posterImage, loadingIndicator);
-      hlsScript.onerror = () => {
-        console.warn("meetergo: Failed to load Hls.js, trying direct playback");
-        video.src = videoSrc;
-        loadingIndicator.style.display = "none";
-      };
-      document.head.appendChild(hlsScript);
+      console.warn("meetergo: HLS not supported in this browser");
+      this.fallbackToPoster(videoElement, container);
     }
   }
 
-  /**
-   * Initializes HLS player
-   */
   private initHlsPlayer(
     video: HTMLVideoElement,
     videoSrc: string,
-    posterImage: string,
+    posterImage: string | undefined,
     loadingIndicator: HTMLElement
   ): void {
-    if (Hls.isSupported()) {
-      const hls = new Hls();
+    if (window.Hls && window.Hls.isSupported()) {
+      const hls = new window.Hls();
       hls.loadSource(videoSrc);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch(() => {
           loadingIndicator.style.display = "none";
         });
       });
-      hls.on(Hls.Events.ERROR, (_, data) => {
+      hls.on(window.Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
-          this.fallbackToPoster(video, posterImage);
+          if (posterImage) {
+            this.fallbackToPoster(video, posterImage);
+          }
           loadingIndicator.style.display = "none";
         }
       });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = videoSrc;
+      if (posterImage) video.poster = posterImage;
       video.addEventListener("loadedmetadata", () => {
         video.play().catch(() => {
           loadingIndicator.style.display = "none";
@@ -1922,25 +1987,32 @@ export class MeetergoIntegration {
       });
     } else {
       console.warn("meetergo: HLS is not supported in this browser");
-      this.fallbackToPoster(video, posterImage);
+      if (posterImage) {
+        this.fallbackToPoster(video, posterImage);
+      }
       loadingIndicator.style.display = "none";
     }
   }
 
-  /**
-   * Fallback to poster image when video fails
-   */
-  private fallbackToPoster(video: HTMLVideoElement, posterImage: string): void {
-    if (!posterImage || !video.parentElement) return;
+  private fallbackToPoster(
+    video: HTMLVideoElement,
+    posterImage: string | HTMLElement
+  ): void {
+    if (!video.parentElement) return;
 
-    const fallbackImg = document.createElement("img");
-    fallbackImg.src = posterImage;
-    Object.assign(fallbackImg.style, {
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-    });
-    video.parentElement.replaceChild(fallbackImg, video);
+    if (typeof posterImage === "string") {
+      const fallbackImg = document.createElement("img");
+      fallbackImg.src = posterImage;
+      Object.assign(fallbackImg.style, {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      });
+      video.parentElement.replaceChild(fallbackImg, video);
+    } else if (posterImage instanceof HTMLElement) {
+      // If posterImage is an HTMLElement (container), just hide the video
+      video.style.display = "none";
+    }
   }
 
   /**
@@ -1961,7 +2033,9 @@ export class MeetergoIntegration {
     }
 
     videoContainer.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.2)";
-    closeButton.style.opacity = "1";
+
+    // Change close button background on hover instead of opacity
+    closeButton.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
 
     // Only enhance CTA text if it's visible
     if (ctaElement.style.display !== "none") {
@@ -1986,7 +2060,9 @@ export class MeetergoIntegration {
     }
 
     videoContainer.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
-    closeButton.style.opacity = "0";
+
+    // Reset close button background on mouse leave
+    closeButton.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
   }
 
   /**
