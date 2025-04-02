@@ -304,7 +304,7 @@ export class MeetergoIntegration {
     e.preventDefault();
     if (!target) return;
 
-    const targetListener = window.meetergoSettings?.formListeners.find(
+    const targetListener = window.meetergoSettings?.formListeners?.find(
       (listener) => {
         // Need to define `id`
         if (!target.id) return false;
