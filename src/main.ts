@@ -301,7 +301,6 @@ export class MeetergoIntegration {
     if (!(e.currentTarget instanceof HTMLFormElement)) return;
 
     const target = e.currentTarget;
-    e.preventDefault();
     if (!target) return;
 
     const targetListener = window.meetergoSettings?.formListeners?.find(
