@@ -93,6 +93,8 @@ floatingButton: {
 
 The `onSuccess` callback is triggered after a booking is successfully completed. It receives a data object with details about the booking, which you can use to perform actions like redirecting the user or sending analytics events.
 
+**Note:** This callback only works with booking pages hosted on `cal.meetergo.com` and is not supported on legacy pages.
+
 ```javascript
 window.meetergoSettings = {
   onSuccess(data) {

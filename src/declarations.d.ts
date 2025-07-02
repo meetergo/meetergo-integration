@@ -75,6 +75,8 @@ type MeetergoSettings = {
   /**
    * Callback function that is executed after a booking is successfully completed.
    * It receives a data object with details about the booking.
+   * 
+   * @note This callback only works with booking pages hosted on `cal.meetergo.com` and is not supported on legacy pages.
    *
    * @param {BookingSuccessfulData} data - The booking data, containing details like `appointmentId`, `bookingType`, etc.
    * @example
