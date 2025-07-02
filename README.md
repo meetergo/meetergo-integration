@@ -76,7 +76,7 @@ Add the `meetergo-styled-button` class to automatically style your booking butto
 
 Customize the floating button with the following options:
 
-```javascript
+````javascript
 floatingButton: {
   position: "bottom-right", // Options: top-left, top-center, top-right, middle-left, middle-center, middle-right, bottom-left, bottom-center, bottom-right
   link: "my.meetergo.com/book/my-booking-link",
@@ -86,7 +86,38 @@ floatingButton: {
   backgroundColor: "#0A64BC", // Custom background color
   textColor: "#FFFFFF" // Custom text color
 }
+
+### Callbacks
+
+#### `onSuccess`
+
+The `onSuccess` callback is triggered after a booking is successfully completed. It receives a data object with details about the booking, which you can use to perform actions like redirecting the user or sending analytics events.
+
+```javascript
+window.meetergoSettings = {
+  onSuccess(data) {
+    console.log("Meeting booked!", data);
+    // Example: Redirect to a thank you page if an appointmentId is present
+    if (data.appointmentId) {
+      window.location.href = `/thank-you?id=${data.appointmentId}`;
+    }
+  }
+};
+````
+
+The `data` object has the following structure:
+
+```typescript
+type BookingSuccessfulData = {
+  appointmentId?: string;
+  secret?: string;
+  attendeeEmail?: string;
+  bookingType?: "doubleOptIn" | "requireHostConfirmation";
+  provisionalBookingId?: string;
+};
 ```
+
+````
 
 ### Collapsible Sidebar
 
@@ -103,7 +134,7 @@ sidebar: {
   backgroundColor: "#0A64BC", // Custom button background color
   textColor: "#FFFFFF" // Custom button text color
 }
-```
+````
 
 ### Video Embed
 

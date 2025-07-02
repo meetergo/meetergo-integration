@@ -622,6 +622,13 @@ export class MeetergoIntegration {
               window.meetergo.closeModal();
               break;
             }
+            case "booking-successful": {
+              if (window.meetergoSettings?.onSuccess) {
+                const data = meetergoEvent.data as BookingSuccessfulData;
+                window.meetergoSettings.onSuccess(data);
+              }
+              break;
+            }
             default: {
               // Ignore unrecognized events
               break;
