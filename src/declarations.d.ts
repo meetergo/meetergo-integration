@@ -72,11 +72,35 @@ type MeetergoSettings = {
   prefill?: Record<string, string>;
   formListeners: FormListener[];
   disableModal?: boolean;
-  onSuccess?: (appointmentId: string) => void;
+  /**
+   * Callback function that is executed after a booking is successfully completed.
+   * It receives a data object with details about the booking.
+   *
+   * @param {BookingSuccessfulData} data - The booking data, containing details like `appointmentId`, `bookingType`, etc.
+   * @example
+   * window.meetergoSettings = {
+   *   onSuccess(data) {
+   *     console.log("Meeting booked!", data);
+   *     // e.g. redirect to a thank you page
+   *     if (data.appointmentId) {
+   *       window.location.href = `/thank-you?id=${data.appointmentId}`;
+   *     }
+   *   }
+   * };
+   */
+  onSuccess?: (data: BookingSuccessfulData) => void;
   enableAutoResize?: boolean;
 };
 
 declare global {
+  type BookingSuccessfulData = {
+    appointmentId?: string;
+    secret?: string;
+    attendeeEmail?: string;
+    bookingType?: "doubleOptIn" | "requireHostConfirmation";
+    provisionalBookingId?: string;
+  };
+
   interface Window {
     meetergo: MeetergoIntegration;
     meetergoSettings: MeetergoSettings;
