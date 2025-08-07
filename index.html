@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Improved Meetergo Integration Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      h1,
+      h2,
+      h3 {
+        color: #333;
+      }
+      button {
+        margin: 5px;
+        padding: 10px 15px;
+        border: 1px solid #ccc;
+        background: #f8f9fa;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      button:hover {
+        background: #e9ecef;
+      }
+      form {
+        margin: 10px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #f9f9f9;
+      }
+      input {
+        margin: 5px;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 200px;
+      }
+      input:focus {
+        border-color: #0a64bc;
+        outline: none;
+      }
+      .test-section {
+        margin: 20px 0;
+      }
+      .visual-indicators {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 12px;
+        max-width: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Testing Improved Meetergo Integration</h1>
+
+    <!-- Configure Meetergo settings -->
+    <script>
+      window.meetergoSettings = {
+        company: "demo-company",
+        floatingButton: {
+          position: "bottom-right",
+          link: "https://cal.meetergo.com/demo-24/30-min-meeting-1-1-1",
+          text: "Book Meeting",
+          backgroundColor: "#0A64BC",
+          textColor: "#FFFFFF",
+          animation: "pulse",
+        },
+        sidebar: {
+          position: "right",
+          width: "400px",
+          link: "https://cal.meetergo.com/demo-24/30-min-meeting-1-1-1",
+          buttonText: "Open Scheduler",
+          buttonIcon: "calendar",
+          buttonPosition: "middle-right",
+          backgroundColor: "#0A64BC",
+          textColor: "#FFFFFF",
+        },
+        videoEmbed: {
+          videoSrc:
+            "https://video.meetergo.com/public/xUmgqdXdpVzjhgvlLRITt/xUmgqdXdpVzjhgvlLRITt.m3u8",
+          posterImage:
+            "https://video.meetergo.com/public/xUmgqdXdpVzjhgvlLRITt/xUmgqdXdpVzjhgvlLRITt_thumbnail.0000000.jpg",
+          bookingLink:
+            "https://cal.meetergo.com/dominik/produkt-demo-videobuchungsseite",
+          bookingCta: "Book Appointment 👉",
+          bookingCtaColor: "#FFFFFF",
+          videoCta: "Click me 😊",
+          buttonColor: "#196EF5",
+          size: {
+            width: "130px",
+            height: "200px",
+          },
+          position: "bottom-left",
+        },
+        prefill: {
+          firstname: "John",
+          lastname: "Doe",
+          email: "john.doe@example.com",
+          phone: "+1234567890",
+        },
+        formListeners: [
+          {
+            formId: "test-form",
+            link: "https://cal.meetergo.com/demo-24/30-min-meeting-1-1-1",
+          },
+        ],
+      };
+    </script>
+
+    <!-- Load your improved local build -->
+    <script src="./dist/esbuild/browser.js"></script>
+
+    <!-- Visual indicators for what components should be visible -->
+    <div class="visual-indicators">
+      <strong>✨ New Auto-Resize Features:</strong><br />
+      • Main iframe: NO scrollbars, auto-adjusts height<br />
+      • Smooth height transitions<br />
+      • Professional appearance<br /><br />
+      <strong>Components to look for:</strong><br />
+      • Floating button (bottom-right) with pulse animation<br />
+      • Video embed widget (bottom-left) - Real Meetergo HLS video!<br />
+      • Sidebar toggle button (middle-right edge)<br />
+      • English text: "Click me 😊" and "Book Appointment 👉"<br />
+    </div>
+
+    <div style="margin: 20px 0">
+      <h2>Test Features:</h2>
+
+      <!-- 1. Improved Iframe Integration (Auto-Resize, No Scrollbars) -->
+      <h3>1. Improved Iframe Integration ✨</h3>
+      <p>
+        <strong>New Features:</strong> Auto-resizing height, no scrollbars,
+        smooth appearance.
+      </p>
+      <div
+        style="
+          min-width: 330px;
+          border: 1px solid #ccc;
+          margin: 10px 0;
+          background: #f9f9f9;
+        "
+        class="meetergo-iframe"
+        link="https://cal.meetergo.com/demo-24/30-min-meeting-1-1-1"
+      ></div>
+      <p>
+        <small
+          >📏 Notice: Height adjusts automatically, no scrollbars, professional
+          appearance!</small
+        >
+      </p>
+
+      <!-- 2. Modal Button -->
+      <h3>2. Modal Button</h3>
+      <button
+        class="meetergo-modal-button meetergo-styled-button"
+        link="https://cal.meetergo.com/demo-24/30-min-meeting-1-1-1"
+      >
+        Open Booking Modal
+      </button>
+
+      <!-- 3. Form Integration Test -->
+      <h3>3. Form Integration</h3>
+      <form id="test-form" onsubmit="return testFormSubmit(event)">
+        <input type="text" name="firstname" placeholder="First Name" required />
+        <input type="email" name="email" placeholder="Email" required />
+        <button type="submit">Submit Form (Should Open Booking)</button>
+      </form>
+      <p>
+        <small
+          >When you submit this form, it should open the booking modal with
+          prefilled data</small
+        >
+      </p>
+
+      <!-- 4. API Test Buttons -->
+      <h3>4. API Testing</h3>
+      <button onclick="testSetPrefill()">Test setPrefill()</button>
+      <button onclick="testLaunchScheduler()">Test launchScheduler()</button>
+      <button onclick="testGetStatus()">Test getStatus()</button>
+      <button onclick="testDestroy()">Test destroy()</button>
+
+      <!-- 5. Error Testing -->
+      <h3>5. Error Handling Test</h3>
+      <button onclick="testErrorHandling()">Test Error Notification</button>
+
+      <!-- 6. Component Testing -->
+      <h3>6. Individual Component Tests</h3>
+      <button onclick="testSidebar()">Toggle Sidebar</button>
+      <button onclick="testVideoEmbed()">Test Video Embed</button>
+      <button onclick="testFloatingButton()">Toggle Floating Button</button>
+      <button onclick="testIframeResize()">Test Iframe Auto-Resize</button>
+      <button onclick="debugComponents()">🔍 Debug: Show All Components</button>
+
+      <div
+        id="output"
+        style="
+          margin-top: 20px;
+          padding: 10px;
+          background: #f5f5f5;
+          border-radius: 4px;
+        "
+      >
+        <strong>Test Output:</strong>
+        <div id="results"></div>
+      </div>
+    </div>
+
+    <script>
+      // Test functions
+      function testSetPrefill() {
+        if (window.meetergo) {
+          window.meetergo.setPrefill({
+            firstname: "Jane",
+            lastname: "Smith",
+            email: "jane.smith@example.com",
+            phone: "+9876543210",
+          });
+          document.getElementById("results").innerHTML +=
+            "<br>✅ setPrefill() called successfully";
+        }
+      }
+
+      function testLaunchScheduler() {
+        if (window.meetergo) {
+          window.meetergo.launchScheduler(
+            "https://cal.meetergo.com/demo-24/30-min-meeting-1-1-1",
+            {
+              firstname: "Test",
+              email: "test@example.com",
+            }
+          );
+          document.getElementById("results").innerHTML +=
+            "<br>✅ launchScheduler() called successfully";
+        }
+      }
+
+      function testGetStatus() {
+        if (window.meetergo && window.meetergo.getStatus) {
+          const status = window.meetergo.getStatus();
+          document.getElementById("results").innerHTML +=
+            "<br>✅ getStatus(): " + JSON.stringify(status);
+        } else {
+          document.getElementById("results").innerHTML +=
+            "<br>❌ getStatus() not available";
+        }
+      }
+
+      function testDestroy() {
+        if (window.meetergo && window.meetergo.destroy) {
+          const confirmed = confirm(
+            "⚠️ WARNING: destroy() will remove ALL components and break all functionality!\n\nYou'll need to reload the page after this. Continue?"
+          );
+          if (confirmed) {
+            window.meetergo.destroy();
+            document.getElementById("results").innerHTML +=
+              "<br>⚠️ destroy() called - ALL integration components removed!";
+            document.getElementById("results").innerHTML +=
+              "<br>🔄 You must RELOAD the page to test again";
+
+            // Update page to show destroyed state
+            setTimeout(() => {
+              document.querySelector(".visual-indicators").innerHTML =
+                '<strong style="color: red;">DESTROYED!</strong><br>All components removed.<br>Reload page to restore.';
+            }, 1000);
+          }
+        } else {
+          document.getElementById("results").innerHTML +=
+            "<br>❌ destroy() not available";
+        }
+      }
+
+      function testErrorHandling() {
+        if (window.meetergo) {
+          // Trigger an error to test the notification system
+          window.meetergo.launchScheduler("invalid-url");
+          document.getElementById("results").innerHTML +=
+            "<br>✅ Error test triggered - check for error notification";
+        }
+      }
+
+      function testFormSubmit(event) {
+        document.getElementById("results").innerHTML +=
+          "<br>✅ Form submitted - should trigger booking modal";
+        // Let the form submit naturally to test form listener integration
+        return true;
+      }
+
+      function testSidebar() {
+        // Look for sidebar toggle button (position-specific class)
+        const sidebarButton =
+          document.querySelector(".meetergo-sidebar-toggle-right") ||
+          document.querySelector(".meetergo-sidebar-toggle-left") ||
+          document.querySelector('[class*="meetergo-sidebar-toggle"]');
+        if (sidebarButton) {
+          sidebarButton.click();
+          document.getElementById("results").innerHTML +=
+            "<br>✅ Sidebar toggle tested";
+        } else {
+          document.getElementById("results").innerHTML +=
+            "<br>❌ Sidebar button not found (looking for .meetergo-sidebar-toggle-*)";
+        }
+      }
+
+      function testVideoEmbed() {
+        // Look for video embed container
+        const videoEmbed = document.querySelector(".meetergo-video-container");
+        if (videoEmbed) {
+          // Try to click it to expand
+          videoEmbed.click();
+          document.getElementById("results").innerHTML +=
+            "<br>✅ Video embed found and clicked to expand";
+          document.getElementById("results").innerHTML +=
+            "<br>📊 Progress bar now moves smoothly (only when expanded)!";
+          document.getElementById("results").innerHTML +=
+            "<br>🔇 Mute button is now clickable - toggles audio on/off";
+          document.getElementById("results").innerHTML +=
+            "<br>🎬 Try clicking mute button (top-left) and progress bar!";
+        } else {
+          document.getElementById("results").innerHTML +=
+            "<br>❌ Video embed not found (looking for .meetergo-video-container)";
+        }
+      }
+
+      function testFloatingButton() {
+        // Look for floating button (it's a modal button with fixed positioning)
+        const floatingButtons = document.querySelectorAll(
+          ".meetergo-modal-button"
+        );
+        const floatingButton = Array.from(floatingButtons).find(
+          (btn) => window.getComputedStyle(btn).position === "fixed"
+        );
+
+        if (floatingButton) {
+          floatingButton.click();
+          document.getElementById("results").innerHTML +=
+            "<br>✅ Floating button found and clicked";
+        } else {
+          document.getElementById("results").innerHTML +=
+            "<br>❌ Floating button not found (looking for fixed positioned .meetergo-modal-button)";
+        }
+      }
+
+      function testIframeResize() {
+        const iframe = document.querySelector(".meetergo-iframe iframe");
+        if (iframe) {
+          const currentHeight = iframe.style.height;
+          document.getElementById(
+            "results"
+          ).innerHTML += `<br>✅ Iframe found - Current height: ${currentHeight}`;
+          document.getElementById("results").innerHTML +=
+            "<br>📏 Auto-resize system is active - height adjusts based on content!";
+        } else {
+          document.getElementById("results").innerHTML +=
+            "<br>❌ Iframe not found";
+        }
+      }
+
+      function debugComponents() {
+        const results = document.getElementById("results");
+        results.innerHTML += "<br><strong>🔍 Component Debug Info:</strong>";
+
+        // Check all meetergo components
+        const components = [
+          {
+            name: "Sidebar Button (right)",
+            selector: ".meetergo-sidebar-toggle-right",
+          },
+          {
+            name: "Sidebar Button (left)",
+            selector: ".meetergo-sidebar-toggle-left",
+          },
+          { name: "Video Container", selector: ".meetergo-video-container" },
+          { name: "Modal Buttons", selector: ".meetergo-modal-button" },
+          { name: "Iframe", selector: ".meetergo-iframe" },
+          { name: "Modal", selector: "#meetergo-modal" },
+        ];
+
+        components.forEach((comp) => {
+          const elements = document.querySelectorAll(comp.selector);
+          if (elements.length > 0) {
+            const positions = Array.from(elements)
+              .map((el) => {
+                const style = window.getComputedStyle(el);
+                return `${style.position} (${style.top}, ${style.right}, ${style.bottom}, ${style.left})`;
+              })
+              .join(", ");
+            results.innerHTML += `<br>✅ ${comp.name}: Found ${elements.length} - ${positions}`;
+          } else {
+            results.innerHTML += `<br>❌ ${comp.name}: Not found`;
+          }
+        });
+      }
+
+      // Test initialization
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          if (window.meetergo) {
+            document.getElementById("results").innerHTML =
+              "✅ Meetergo integration loaded successfully!";
+
+            // Test if new methods exist
+            const methods = ["destroy", "getStatus", "isReady"];
+            methods.forEach((method) => {
+              if (window.meetergo[method]) {
+                document.getElementById(
+                  "results"
+                ).innerHTML += `<br>✅ ${method}() available`;
+              } else {
+                document.getElementById(
+                  "results"
+                ).innerHTML += `<br>❌ ${method}() not available`;
+              }
+            });
+          } else {
+            document.getElementById("results").innerHTML =
+              "❌ Meetergo integration failed to load";
+          }
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

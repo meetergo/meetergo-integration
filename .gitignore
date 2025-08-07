@@ -3,6 +3,10 @@
 /lib/
 /docs/
 .idea/*
+/dist/
+/build/
+/node_modules/
+*.log
 
 .DS_Store
 coverage

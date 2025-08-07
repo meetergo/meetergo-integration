@@ -19,6 +19,7 @@
     "build": "tsc -p tsconfig.json",
     "build-all": "npm run clean && npm run esbuild-browser",
     "esbuild-browser": "esbuild src/browser.ts --bundle --minify --jsx=automatic --jsx-dev=false --external:react --external:react-dom --sourcemap=external  --tree-shaking=true --outfile=dist/esbuild/browser.js",
+    "esbuild-browser:ultra": "esbuild src/browser.ts --bundle --minify --target=es2019 --format=iife --tree-shaking=true --drop:console --drop:debugger --legal-comments=none --charset=utf8 --outfile=dist/esbuild/browser-ultra.js",
     "esbuild-browser:dev": "esbuild src/browser.ts --bundle --outfile=dist/esbuild/browser.js",
     "esbuild-browser:watch": "esbuild src/browser.ts --bundle --watch --outfile=dist/esbuild/browser.js",
     "esbuild-node": "esbuild src/cli.ts --bundle --platform=node --minify --sourcemap=external --outfile=dist/esbuild/cli.js",
