@@ -107,6 +107,8 @@ export interface MeetergoSettings {
   prefill?: MeetergoPrefill;
   formListeners: FormListener[];
   disableModal?: boolean;
+  iframeHeight?: number;
+  enableAutoResize?: boolean;
   /**
    * Callback function that is executed after a booking is successfully completed.
    * Supports both legacy string format and new data object format.
