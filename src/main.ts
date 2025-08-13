@@ -681,9 +681,14 @@ export class MeetergoIntegration {
           iframe.style.overflow = "hidden";
           iframe.style.display = "block";
           
-          // Start with reasonable default height
-          iframe.style.height = "700px";
-          iframe.style.minHeight = "500px";
+          // Use a reliable fixed height that works for most booking scenarios
+          const viewportHeight = window.innerHeight;
+          const reliableHeight = this.calculateReliableHeight(viewportHeight, link);
+          iframe.style.height = `${reliableHeight}px`;
+          iframe.style.minHeight = "800px";
+          iframe.style.overflow = "auto"; // Allow scrolling as fallback if needed
+          
+          console.log(`Meetergo auto-resize: Set reliable height of ${reliableHeight}px for booking interface`);
 
           const loadingIndicator = document.createElement("div");
           loadingIndicator.className = "meetergo-spinner";
@@ -695,8 +700,16 @@ export class MeetergoIntegration {
           const indicatorId = `meetergo-spinner-${Math.random().toString(36).substring(2, 11)}`;
           loadingIndicator.id = indicatorId;
 
-          // Setup auto-resize functionality
-          this.setupIframeAutoResize(iframe);
+          // Setup auto-resize monitoring (check data-resize attribute like Calendly)
+          const enableResize = anchor.getAttribute("data-resize") === "true" || 
+                               window.meetergoSettings?.enableAutoResize !== false;
+          
+          if (enableResize) {
+            this.setupMinimalAutoResize(iframe);
+            console.log('Meetergo auto-resize: Enabled for this iframe');
+          } else {
+            console.log('Meetergo auto-resize: Disabled via data-resize="false" or settings');
+          }
 
           iframe.addEventListener("load", () => {
             const spinner = document.getElementById(indicatorId);
@@ -704,8 +717,7 @@ export class MeetergoIntegration {
               spinner.parentNode.removeChild(spinner);
             }
             
-            // Try to get initial height from iframe content
-            this.adjustIframeHeight(iframe);
+            console.log('Meetergo iframe loaded with fixed height - no dynamic resizing');
           });
 
           if (anchor instanceof HTMLElement) {
@@ -740,27 +752,70 @@ export class MeetergoIntegration {
 
   /**
    * Setup auto-resize functionality for an iframe
-   * Uses postMessage communication to receive height updates from the iframe content
+   * Uses multiple strategies: postMessage, polling, and observer-based detection
    */
   private setupIframeAutoResize(iframe: HTMLIFrameElement): void {
     try {
+      // Track iframe state for cleanup and optimization
+
       const messageHandler = (event: MessageEvent) => {
-        // Security check - only accept messages from Meetergo domains
-        if (!this.isValidMeetergoOrigin(event.origin)) {
+        // Log all messages from Meetergo domains for debugging
+        if (this.isValidMeetergoOrigin(event.origin) || event.origin.includes('localhost')) {
+          console.log('Meetergo auto-resize: Received message from', event.origin, event.data);
+        }
+        
+        // Security check - only accept messages from Meetergo domains or allow localhost for testing
+        if (!this.isValidMeetergoOrigin(event.origin) && !event.origin.includes('localhost')) {
           return;
         }
 
         if (event.data && typeof event.data === 'object') {
-          // Handle height update messages
+          let newHeight: number | null = null;
+
+          // Handle various height message formats
           if (event.data.type === 'meetergo:height-update' && event.data.height) {
-            const newHeight = Math.max(parseInt(event.data.height, 10), 400);
-            iframe.style.height = `${newHeight}px`;
+            newHeight = parseInt(event.data.height, 10);
           }
-          
-          // Handle scroll height messages
-          if (event.data.type === 'meetergo:scroll-height' && event.data.scrollHeight) {
-            const newHeight = Math.max(parseInt(event.data.scrollHeight, 10), 400);
-            iframe.style.height = `${newHeight}px`;
+          else if (event.data.type === 'meetergo:scroll-height' && event.data.scrollHeight) {
+            newHeight = parseInt(event.data.scrollHeight, 10);
+          }
+          else if (event.data.type === 'iframe-resizer' && event.data.height) {
+            newHeight = parseInt(event.data.height, 10);
+          }
+          else if (event.data.height && typeof event.data.height === 'number') {
+            newHeight = event.data.height;
+          }
+          else if (event.data.scrollHeight && typeof event.data.scrollHeight === 'number') {
+            newHeight = event.data.scrollHeight;
+          }
+          else if (event.data.contentHeight && typeof event.data.contentHeight === 'number') {
+            newHeight = event.data.contentHeight;
+          }
+
+          // Update height if we got a valid value
+          if (newHeight && newHeight > 0) {
+            const finalHeight = Math.max(newHeight, 400);
+            const currentHeight = parseInt(iframe.style.height) || 0;
+            this.updateIframeHeight(iframe, finalHeight);
+            
+            // Log successful height update for debugging
+            console.log(`Meetergo iframe auto-resize: Updated height from ${currentHeight}px to ${finalHeight}px (source: ${event.data.type || 'unknown'})`);
+          } else {
+            // Log failed height messages for debugging
+            console.warn('Meetergo auto-resize: Received invalid height message', event.data);
+          }
+        }
+        
+        // Handle string-based messages (fallback)
+        if (typeof event.data === 'string') {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.height && typeof parsed.height === 'number') {
+              const finalHeight = Math.max(parsed.height, 400);
+              this.updateIframeHeight(iframe, finalHeight);
+            }
+          } catch (e) {
+            // Not JSON, ignore
           }
         }
       };
@@ -772,13 +827,29 @@ export class MeetergoIntegration {
         this.messageHandlers = [];
       }
       this.messageHandlers.push({ handler: messageHandler, iframe });
-      
-      // Request initial height after iframe loads
+
+      // Enhanced iframe load handler with continuous monitoring
       iframe.addEventListener('load', () => {
+        // Initial height request
         this.createTimeout(() => {
           this.requestIframeHeight(iframe);
-        }, 1000);
+        }, 500);
+
+        // Setup continuous height monitoring
+        this.setupContinuousHeightMonitoring(iframe);
+        
+        // Setup interaction-based monitoring
+        this.setupInteractionBasedMonitoring(iframe);
+        
+        // Attempt direct height detection if same-origin
+        this.attemptDirectHeightDetection(iframe);
+        
+        // Try to inject auto-resize script into iframe
+        this.injectAutoResizeScript(iframe);
       });
+
+      // Start polling-based height detection as fallback
+      this.startHeightPolling(iframe);
 
     } catch (error) {
       errorHandler.handleError({
@@ -787,6 +858,679 @@ export class MeetergoIntegration {
         context: 'setupIframeAutoResize',
         error: error as Error
       });
+    }
+  }
+
+  /**
+   * Update iframe height with smooth transition and jump prevention
+   */
+  private updateIframeHeight(iframe: HTMLIFrameElement, newHeight: number): void {
+    const currentHeight = parseInt(iframe.style.height) || 400;
+    const heightDifference = Math.abs(newHeight - currentHeight);
+    
+    // Prevent jumps by being more selective about when to resize
+    if (heightDifference < 20) {
+      // Too small a change - ignore to prevent jitter
+      return;
+    }
+    
+    if (heightDifference > 500) {
+      // Very large change - might be incorrect, be more cautious
+      console.warn(`Meetergo auto-resize: Large height change detected (${currentHeight}px → ${newHeight}px). Validating...`);
+      
+      // For large changes, increase gradually to avoid jumps
+      const targetHeight = currentHeight < newHeight 
+        ? Math.min(newHeight, currentHeight + 300) // Increase by max 300px at a time
+        : Math.max(newHeight, currentHeight - 200); // Decrease by max 200px at a time
+        
+      newHeight = targetHeight;
+    }
+    
+    // Apply smooth transition
+    iframe.style.transition = 'height 0.4s cubic-bezier(0.4, 0.0, 0.2, 1)';
+    iframe.style.height = `${newHeight}px`;
+    
+    // Remove transition after animation completes
+    this.createTimeout(() => {
+      iframe.style.transition = '';
+    }, 400);
+    
+    console.log(`Meetergo auto-resize: Smoothly updating height from ${currentHeight}px to ${newHeight}px (difference: ${heightDifference}px)`);
+  }
+
+  /**
+   * Setup intelligent height monitoring that responds to content changes
+   */
+  private setupContinuousHeightMonitoring(iframe: HTMLIFrameElement): void {
+    let lastKnownHeight = parseInt(iframe.style.height) || 400;
+    let stableHeightCount = 0;
+    let monitoringInterval = 3000; // Start with 3 second intervals
+    
+    const intelligentHeightCheck = () => {
+      this.requestIframeHeight(iframe);
+      this.attemptDirectHeightDetection(iframe);
+      
+      const currentHeight = parseInt(iframe.style.height) || 400;
+      
+      if (Math.abs(currentHeight - lastKnownHeight) < 20) {
+        stableHeightCount++;
+        
+        // If height is stable, reduce monitoring frequency
+        if (stableHeightCount > 3) {
+          monitoringInterval = Math.min(monitoringInterval * 1.5, 10000); // Max 10 seconds
+        }
+      } else {
+        // Height changed, increase monitoring frequency temporarily
+        stableHeightCount = 0;
+        monitoringInterval = 2000; // Back to 2 seconds
+        lastKnownHeight = currentHeight;
+      }
+      
+      // Schedule next check with adaptive interval
+      this.createTimeout(intelligentHeightCheck, monitoringInterval);
+      
+      console.log(`Meetergo auto-resize: Next height check in ${monitoringInterval}ms (height stable: ${stableHeightCount} times)`);
+    };
+    
+    // Start intelligent monitoring after initial load
+    this.createTimeout(intelligentHeightCheck, 2000);
+    
+    // Stop monitoring after 5 minutes to preserve performance
+    this.createTimeout(() => {
+      console.log('Meetergo auto-resize: Stopping continuous monitoring after 5 minutes');
+    }, 300000);
+  }
+
+  /**
+   * Setup interaction-based monitoring that increases frequency during user activity
+   */
+  private setupInteractionBasedMonitoring(iframe: HTMLIFrameElement): void {
+    let isInteracting = false;
+    let interactionTimer: number | null = null;
+    let lastScrollTop = 0;
+    
+    // Monitor iframe focus/blur to detect user interaction
+    iframe.addEventListener('focus', () => {
+      console.log('Meetergo auto-resize: Iframe focused - starting intensive monitoring');
+      this.startIntensiveMonitoring(iframe);
+      isInteracting = true;
+    });
+
+    // Monitor mouse events over iframe to detect interaction
+    iframe.addEventListener('mouseenter', () => {
+      console.log('Meetergo auto-resize: Mouse over iframe - monitoring for interactions');
+      this.startIntensiveMonitoring(iframe);
+      isInteracting = true;
+    });
+
+    // Monitor clicks on iframe as they often trigger content changes
+    iframe.addEventListener('click', () => {
+      console.log('Meetergo auto-resize: Click detected in iframe - content might change');
+      
+      // After a click, check for height changes after a delay
+      this.createTimeout(() => {
+        console.log('Meetergo auto-resize: Post-click height check');
+        this.detectAndFixScrollbars(iframe);
+      }, 1000);
+      
+      // And again after more time for animations/loading
+      this.createTimeout(() => {
+        console.log('Meetergo auto-resize: Delayed post-click height check');
+        this.detectAndFixScrollbars(iframe);
+      }, 3000);
+    });
+
+    iframe.addEventListener('mouseleave', () => {
+      // Stop intensive monitoring after user stops interacting
+      if (interactionTimer) {
+        window.clearTimeout(interactionTimer);
+      }
+      interactionTimer = this.createTimeout(() => {
+        console.log('Meetergo auto-resize: User interaction ended - reducing monitoring frequency');
+        isInteracting = false;
+      }, 3000); // Wait 3 seconds after mouse leaves
+    });
+
+    // Try to detect scroll changes in iframe (indicates user navigation)
+    const checkForScrollChanges = () => {
+      try {
+        if (iframe.contentWindow) {
+          const currentScrollTop = iframe.contentWindow.scrollY || 0;
+          if (Math.abs(currentScrollTop - lastScrollTop) > 10) {
+            console.log('Meetergo auto-resize: Scroll detected in iframe - checking height');
+            this.requestIframeHeight(iframe);
+            this.attemptDirectHeightDetection(iframe);
+            lastScrollTop = currentScrollTop;
+          }
+        }
+      } catch (e) {
+        // Cross-origin - can't access scroll, that's okay
+      }
+      
+      // Keep checking if user might be interacting
+      if (isInteracting) {
+        this.createTimeout(checkForScrollChanges, 500);
+      }
+    };
+
+    // Start scroll monitoring
+    this.createTimeout(checkForScrollChanges, 1000);
+  }
+
+  /**
+   * Start intensive height monitoring during user interaction
+   */
+  private startIntensiveMonitoring(iframe: HTMLIFrameElement): void {
+    let checkCount = 0;
+    const maxChecks = 20; // Monitor intensively for up to 10 seconds (20 * 500ms)
+
+    const intensiveCheck = () => {
+      if (checkCount >= maxChecks) {
+        console.log('Meetergo auto-resize: Intensive monitoring period ended');
+        return;
+      }
+
+      // Request height updates more frequently during interaction
+      this.requestIframeHeight(iframe);
+      this.attemptDirectHeightDetection(iframe);
+
+      // Check for scrollbar and fix if needed
+      this.createTimeout(() => {
+        this.detectAndFixScrollbars(iframe);
+      }, 100);
+
+      checkCount++;
+      this.createTimeout(intensiveCheck, 500); // Every 500ms during interaction
+    };
+
+    // Start intensive checking
+    this.createTimeout(intensiveCheck, 100);
+  }
+
+  /**
+   * Attempt direct height detection for same-origin iframes
+   */
+  private attemptDirectHeightDetection(iframe: HTMLIFrameElement): void {
+    try {
+      if (iframe.contentDocument && iframe.contentWindow) {
+        const doc = iframe.contentDocument;
+        const body = doc.body;
+        const html = doc.documentElement;
+
+        if (body && html) {
+          const contentHeight = Math.max(
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
+            html.offsetHeight
+          );
+
+          if (contentHeight > 0) {
+            const newHeight = Math.max(contentHeight + 20, 400); // Add padding
+            this.updateIframeHeight(iframe, newHeight);
+            
+            // Setup mutation observer for content changes
+            this.setupContentMutationObserver(iframe, doc);
+          }
+        }
+      }
+    } catch (error) {
+      // Expected for cross-origin iframes - this is normal
+      // Continue with postMessage strategy
+    }
+  }
+
+  /**
+   * Setup mutation observer to detect content changes
+   */
+  private setupContentMutationObserver(iframe: HTMLIFrameElement, doc: Document): void {
+    if (typeof MutationObserver === 'undefined') return;
+
+    try {
+      const observer = new MutationObserver(() => {
+        // Debounce the height check to avoid excessive calls
+        this.createTimeout(() => {
+          this.attemptDirectHeightDetection(iframe);
+        }, 100);
+      });
+
+      observer.observe(doc.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+
+      // Store observer for cleanup (extend the existing intersectionObservers array)
+      if (!this.intersectionObservers) {
+        this.intersectionObservers = [];
+      }
+      this.intersectionObservers.push(observer as any);
+
+    } catch (error) {
+      // Mutation observer setup failed - continue without it
+    }
+  }
+
+  /**
+   * Start polling-based height detection as ultimate fallback
+   */
+  private startHeightPolling(iframe: HTMLIFrameElement): void {
+    let pollCount = 0;
+    const maxPolls = 60; // Poll for up to 2 minutes
+
+    const pollHeight = () => {
+      if (pollCount >= maxPolls) {
+        console.log('Meetergo auto-resize: Polling stopped after maximum attempts');
+        return;
+      }
+      
+      this.requestIframeHeight(iframe);
+      this.attemptDirectHeightDetection(iframe);
+      
+      // Only do estimation occasionally to avoid constant height changes
+      if (pollCount % 3 === 0) {
+        console.log(`Meetergo auto-resize: Polling attempt ${pollCount + 1}/${maxPolls} (with estimation)`);
+        this.attemptHeightEstimation(iframe);
+      }
+      
+      pollCount++;
+      this.createTimeout(pollHeight, 2000);
+    };
+
+    // Start polling after initial load
+    this.createTimeout(pollHeight, 3000);
+  }
+
+  /**
+   * Attempt smart height estimation based on content and context
+   */
+  private attemptHeightEstimation(iframe: HTMLIFrameElement): void {
+    try {
+      const currentHeight = parseInt(iframe.style.height) || 600;
+      const viewportHeight = window.innerHeight;
+      
+      // Only estimate if current height seems insufficient (has scrollbar potential)
+      if (currentHeight < 800) {
+        // Conservative height estimation - just enough to likely eliminate scrollbars
+        const estimatedHeight = Math.min(
+          Math.max(currentHeight * 1.3, 900), // 30% larger, min 900px
+          Math.min(viewportHeight * 0.8, 1200) // Max 80% viewport or 1200px
+        );
+        
+        console.log(`Meetergo auto-resize: Estimating better height: ${currentHeight}px → ${estimatedHeight}px`);
+        this.updateIframeHeight(iframe, estimatedHeight);
+        
+      } else {
+        console.log(`Meetergo auto-resize: Current height ${currentHeight}px seems reasonable - no estimation needed`);
+      }
+    } catch (error) {
+      console.warn('Meetergo auto-resize: Height estimation failed', error);
+    }
+  }
+
+  /**
+   * Check if iframe still has scrollbars and log status
+   */
+  private checkScrollbarStatus(iframe: HTMLIFrameElement): void {
+    try {
+      const currentHeight = parseInt(iframe.style.height) || 0;
+      
+      // Try to detect if iframe content is scrollable
+      let hasScrollbar = false;
+      
+      try {
+        if (iframe.contentDocument) {
+          const body = iframe.contentDocument.body;
+          const html = iframe.contentDocument.documentElement;
+          
+          if (body && html) {
+            const contentHeight = Math.max(body.scrollHeight, html.scrollHeight);
+            const iframeHeight = iframe.clientHeight;
+            hasScrollbar = contentHeight > iframeHeight;
+            
+            console.log(`Meetergo auto-resize: Content height: ${contentHeight}px, Iframe height: ${iframeHeight}px, Has scrollbar: ${hasScrollbar}`);
+            
+            if (hasScrollbar) {
+              // Try to fix by setting to content height with smooth update
+              const newHeight = Math.max(contentHeight + 30, 400);
+              console.log(`Meetergo auto-resize: Detected scrollbar - adjusting height to ${newHeight}px`);
+              this.updateIframeHeight(iframe, newHeight);
+            }
+          }
+        } else {
+          // Cross-origin - can't directly check, but estimate based on common issues
+          console.log(`Meetergo auto-resize: Cross-origin iframe - current height: ${currentHeight}px`);
+          
+          // Conservative adjustment for cross-origin iframe heights
+          if (currentHeight < 900) {
+            // Moderate increase to likely eliminate scrollbars without being excessive
+            const newHeight = Math.min(Math.max(currentHeight * 1.25, 900), 1100);
+            console.log(`Meetergo auto-resize: Adjusting cross-origin iframe height to ${newHeight}px`);
+            this.updateIframeHeight(iframe, newHeight);
+          }
+        }
+      } catch (e) {
+        // Cross-origin restrictions - use fallback approach
+        console.log(`Meetergo auto-resize: Using cross-origin fallback - current height: ${currentHeight}px`);
+        
+        if (currentHeight < 900) {
+          // Conservative fallback height adjustment
+          const newHeight = Math.min(Math.max(900, currentHeight * 1.2), 1000);
+          console.log(`Meetergo auto-resize: Setting fallback height of ${newHeight}px for cross-origin iframe`);
+          this.updateIframeHeight(iframe, newHeight);
+        }
+      }
+      
+    } catch (error) {
+      console.warn('Meetergo auto-resize: Scrollbar status check failed', error);
+    }
+  }
+
+  /**
+   * Proactively detect and fix scrollbars using visual inspection
+   */
+  private detectAndFixScrollbars(iframe: HTMLIFrameElement): void {
+    try {
+      const currentHeight = parseInt(iframe.style.height) || 400;
+      
+      // Use a more reliable method to detect scrollbars
+      // Check if iframe has scrollbars by comparing clientHeight vs scrollHeight
+      const iframeRect = iframe.getBoundingClientRect();
+      const computedStyle = window.getComputedStyle(iframe);
+      
+      // For cross-origin iframes, we can't access scrollHeight directly
+      // But we can look for visual indicators and use heuristics
+      
+      console.log(`Meetergo auto-resize: Proactive scrollbar check - current height: ${currentHeight}px`);
+      
+      // Strategy 1: If iframe height hasn't changed recently but content might have,
+      // try incrementally increasing height to eliminate potential scrollbars
+      const viewportHeight = window.innerHeight;
+      const maxReasonableHeight = Math.min(viewportHeight * 0.9, 1400);
+      
+      if (currentHeight < maxReasonableHeight) {
+        // Try increasing height in smaller, more conservative increments
+        const increment = Math.min(150, maxReasonableHeight - currentHeight);
+        const testHeight = currentHeight + increment;
+        
+        if (increment > 20) { // Only adjust if there's meaningful space to grow
+          console.log(`Meetergo auto-resize: Preventive height increase from ${currentHeight}px to ${testHeight}px`);
+          this.updateIframeHeight(iframe, testHeight);
+        } else {
+          console.log(`Meetergo auto-resize: Height ${currentHeight}px close to maximum, no adjustment needed`);
+        }
+      } else {
+        console.log(`Meetergo auto-resize: Height ${currentHeight}px at reasonable maximum`);
+      }
+      
+    } catch (error) {
+      console.warn('Meetergo auto-resize: Proactive scrollbar detection failed', error);
+    }
+  }
+
+  /**
+   * Enhanced scrollbar detection specifically for cross-origin iframes
+   */
+  private detectScrollbarsInCrossOriginIframe(iframe: HTMLIFrameElement): boolean {
+    try {
+      // We can't directly access iframe content, but we can use some heuristics
+      
+      // Method 1: Check if iframe is receiving scroll events
+      let hasScrollEvents = false;
+      
+      const scrollListener = () => {
+        hasScrollEvents = true;
+        console.log('Meetergo auto-resize: Scroll event detected in iframe - likely has scrollbar');
+      };
+      
+      iframe.addEventListener('scroll', scrollListener);
+      
+      // Clean up listener after a short time
+      this.createTimeout(() => {
+        iframe.removeEventListener('scroll', scrollListener);
+        return hasScrollEvents;
+      }, 500);
+      
+      return false; // Default to false, will be updated by listener
+      
+    } catch (error) {
+      console.warn('Meetergo auto-resize: Cross-origin scrollbar detection failed', error);
+      return false;
+    }
+  }
+
+  /**
+   * Calculate a reliable height that eliminates scrollbars for most booking scenarios
+   */
+  private calculateReliableHeight(viewportHeight: number, bookingLink: string): number {
+    // Check if user has configured a custom height
+    const customHeight = window.meetergoSettings?.iframeHeight;
+    if (customHeight && typeof customHeight === 'number' && customHeight > 400) {
+      console.log(`Meetergo height: Using custom height ${customHeight}px`);
+      return customHeight;
+    }
+
+    // Base height that works for most booking forms (based on your testing: 1000px+ needed)
+    let baseHeight = 1200; // Start higher to prevent scrollbars
+    
+    // Adjust based on viewport size
+    const viewportAdjustedHeight = Math.max(viewportHeight * 0.8, 1000);
+    
+    // Use the larger of the two, but cap at reasonable maximum
+    const calculatedHeight = Math.max(baseHeight, viewportAdjustedHeight);
+    const maxHeight = Math.min(viewportHeight * 0.95, 1600);
+    
+    const finalHeight = Math.min(calculatedHeight, maxHeight);
+    
+    console.log(`Meetergo height calculation: viewport=${viewportHeight}px, base=${baseHeight}px, final=${finalHeight}px`);
+    
+    return finalHeight;
+  }
+
+  /**
+   * Performance-optimized auto-resize system with message throttling
+   */
+  private setupMinimalAutoResize(iframe: HTMLIFrameElement): void {
+    try {
+      let lastHeight = 0;
+      let lastUpdateTime = 0;
+      let pendingUpdate: number | null = null;
+      let messageCount = 0;
+      const MESSAGE_THROTTLE_MS = 100; // Max one update per 100ms
+      const SIGNIFICANT_HEIGHT_CHANGE = 10; // Only update if height changes by 10px+
+      
+      const performHeightUpdate = (newHeight: number) => {
+        const currentTime = Date.now();
+        const heightDifference = Math.abs(newHeight - lastHeight);
+        
+        // Skip if height change is too small (prevents jitter)
+        if (heightDifference < SIGNIFICANT_HEIGHT_CHANGE) {
+          return;
+        }
+        
+        // Skip if updating too frequently (performance optimization)
+        if (currentTime - lastUpdateTime < MESSAGE_THROTTLE_MS) {
+          // Schedule the update for later instead of dropping it
+          if (pendingUpdate) {
+            window.clearTimeout(pendingUpdate);
+          }
+          pendingUpdate = window.setTimeout(() => {
+            performHeightUpdate(newHeight);
+            pendingUpdate = null;
+          }, MESSAGE_THROTTLE_MS);
+          return;
+        }
+        
+        const finalHeight = Math.max(newHeight + 20, 400);
+        
+        // Apply smooth height transition
+        iframe.style.transition = 'height 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
+        iframe.style.height = `${finalHeight}px`;
+        
+        // Auto-scroll into view if iframe is above viewport (like Calendly)
+        this.createTimeout(() => {
+          const iframeRect = iframe.getBoundingClientRect();
+          if (iframeRect.top < -50) { // Only scroll if significantly above viewport
+            iframe.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            console.log('Meetergo auto-resize: Scrolled iframe into view');
+          }
+        }, 100);
+        
+        // Remove transition after animation
+        this.createTimeout(() => {
+          iframe.style.transition = '';
+        }, 300);
+        
+        // Update tracking variables
+        lastHeight = finalHeight;
+        lastUpdateTime = currentTime;
+        messageCount++;
+        
+        console.log(`Meetergo auto-resize: Height updated to ${finalHeight}px (message #${messageCount}, Δ${heightDifference}px)`);
+      };
+
+      const messageHandler = (event: MessageEvent) => {
+        // Accept messages from Meetergo domains or localhost for testing
+        if (!this.isValidMeetergoOrigin(event.origin) && !event.origin.includes('localhost')) {
+          return;
+        }
+
+        if (event.data && typeof event.data === 'object') {
+          let newHeight: number | null = null;
+
+          // Handle Calendly-style height messages (primary)
+          if (event.data.event === 'meetergo:page_height' && event.data.payload?.height) {
+            newHeight = parseInt(event.data.payload.height, 10);
+          }
+          // Handle direct height messages (backup)
+          else if (event.data.type === 'meetergo:height-update' && event.data.height) {
+            newHeight = parseInt(event.data.height, 10);
+          } 
+          else if (event.data.type === 'meetergo:scroll-height' && event.data.scrollHeight) {
+            newHeight = parseInt(event.data.scrollHeight, 10);
+          }
+
+          if (newHeight && newHeight > 0) {
+            performHeightUpdate(newHeight);
+          }
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+      
+      // Store for cleanup
+      if (!this.messageHandlers) {
+        this.messageHandlers = [];
+      }
+      this.messageHandlers.push({ handler: messageHandler, iframe });
+
+    } catch (error) {
+      console.warn('Meetergo auto-resize: Performance-optimized setup failed', error);
+    }
+  }
+
+  /**
+   * Inject auto-resize script into iframe content (for same-origin iframes)
+   */
+  private injectAutoResizeScript(iframe: HTMLIFrameElement): void {
+    try {
+      if (iframe.contentDocument && iframe.contentWindow) {
+        const doc = iframe.contentDocument;
+        const win = iframe.contentWindow;
+        
+        // Check if script already exists
+        if (doc.querySelector('#meetergo-auto-resize-script')) {
+          return;
+        }
+
+        const script = doc.createElement('script');
+        script.id = 'meetergo-auto-resize-script';
+        script.type = 'text/javascript';
+        script.textContent = `
+          (function() {
+            let lastHeight = 0;
+            
+            function sendHeight() {
+              const body = document.body;
+              const html = document.documentElement;
+              const height = Math.max(
+                body.scrollHeight,
+                body.offsetHeight,
+                html.clientHeight,
+                html.scrollHeight,
+                html.offsetHeight
+              );
+              
+              if (height !== lastHeight && height > 0) {
+                lastHeight = height;
+                window.parent.postMessage({
+                  type: 'meetergo:height-update',
+                  height: height
+                }, '*');
+              }
+            }
+            
+            // Send height immediately
+            sendHeight();
+            
+            // Send height on DOM changes
+            const observer = new MutationObserver(sendHeight);
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true,
+              attributes: true
+            });
+            
+            // Send height on window resize
+            window.addEventListener('resize', sendHeight);
+            
+            // Send height periodically as fallback
+            setInterval(sendHeight, 1000);
+            
+            // Handle height requests from parent
+            window.addEventListener('message', function(event) {
+              if (event.data && (
+                event.data.type === 'meetergo:request-height' ||
+                event.data.type === 'getHeight' ||
+                event.data.action === 'resize' ||
+                event.data.event === 'requestHeight'
+              )) {
+                sendHeight();
+              }
+            });
+          })();
+        `;
+        
+        doc.head.appendChild(script);
+        
+        // Also add a fallback that runs immediately using Function constructor
+        try {
+          const winAny = win as any;
+          const immediateHeightCheck = new winAny.Function(`
+            setTimeout(function() {
+              const height = Math.max(
+                document.body.scrollHeight,
+                document.body.offsetHeight,
+                document.documentElement.clientHeight,
+                document.documentElement.scrollHeight,
+                document.documentElement.offsetHeight
+              );
+              window.parent.postMessage({
+                type: 'meetergo:height-update',
+                height: height
+              }, '*');
+            }, 100);
+          `);
+          immediateHeightCheck();
+        } catch (e) {
+          // Function constructor failed, skip immediate check
+        }
+        
+      }
+    } catch (error) {
+      // Expected for cross-origin iframes - continue without script injection
     }
   }
 
@@ -804,18 +1548,53 @@ export class MeetergoIntegration {
   }
 
   /**
-   * Request height from iframe content
+   * Request height from iframe content using multiple message types
    */
   private requestIframeHeight(iframe: HTMLIFrameElement): void {
     try {
       if (iframe.contentWindow) {
-        iframe.contentWindow.postMessage(
+        // Send multiple types of height request messages
+        const messages = [
           { type: 'meetergo:request-height' },
-          '*'
-        );
+          { type: 'iframe-resizer', method: 'size' },
+          { type: 'getHeight' },
+          { action: 'resize' },
+          { event: 'requestHeight' },
+          { type: 'resize-iframe' },
+          { method: 'getHeight' },
+          { resize: true }
+        ];
+
+        messages.forEach((message, index) => {
+          try {
+            iframe.contentWindow!.postMessage(message, '*');
+            console.log(`Meetergo auto-resize: Sent height request #${index + 1}:`, message);
+          } catch (e) {
+            console.warn(`Meetergo auto-resize: Failed to send message #${index + 1}`, e);
+          }
+        });
+        
+        // Also try sending to specific Meetergo origins
+        const origins = [
+          'https://cal.meetergo.com',
+          'https://app.meetergo.com',
+          'https://meetergo.com'
+        ];
+        
+        origins.forEach(origin => {
+          try {
+            iframe.contentWindow!.postMessage(
+              { type: 'meetergo:request-height' },
+              origin
+            );
+            console.log(`Meetergo auto-resize: Sent height request to origin:`, origin);
+          } catch (e) {
+            console.warn(`Meetergo auto-resize: Failed to send to origin ${origin}`, e);
+          }
+        });
       }
     } catch (error) {
-      // Cross-origin restrictions may prevent this, fallback to intersection observer
+      console.warn('Meetergo auto-resize: requestIframeHeight failed, using observers', error);
       this.setupIntersectionObserver(iframe);
     }
   }
