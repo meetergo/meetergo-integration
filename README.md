@@ -71,19 +71,27 @@ Set meetergo settings and load the script:
 Add a booking iframe that **automatically adjusts height** (no scrollbars needed!):
 
 ```html
-<!-- ✨ New: Auto-resizing iframe with professional appearance -->
+<!-- ✨ Auto-resizing iframe (enabled by default) -->
 <div
   class="meetergo-iframe"
   link="https://cal.meetergo.com/your-booking-link"
+></div>
+
+<!-- Disable auto-resize if needed -->
+<div
+  class="meetergo-iframe"
+  link="https://cal.meetergo.com/your-booking-link"
+  data-resize="false"
 ></div>
 ```
 
 **Features:**
 
-- ✅ **No scrollbars**: Automatic height adjustment
+- ✅ **No scrollbars**: Automatic height adjustment (enabled by default)
 - ✅ **Smooth transitions**: Professional animations
 - ✅ **Cross-origin support**: Works with all meetergo domains
 - ✅ **Fallback handling**: Graceful degradation if auto-resize fails
+- ✅ **Optional disable**: Set `data-resize="false"` to disable auto-resize
 
 ### 🎭 Modal Booking Buttons
 
