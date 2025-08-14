@@ -695,12 +695,14 @@ export class MeetergoIntegration {
           iframe.style.border = "none";
           iframe.style.overflow = "hidden";
           iframe.style.display = "block";
+          iframe.style.paddingTop = "1rem";
+          iframe.style.paddingBottom = "1rem";
 
           // Use a reliable fixed height that works for most booking scenarios
           const viewportHeight = window.innerHeight;
           const reliableHeight = this.calculateReliableHeight(viewportHeight);
           iframe.style.height = `${reliableHeight}px`;
-          iframe.style.minHeight = "800px";
+          iframe.style.minHeight = "400px";
           iframe.style.overflow = "auto"; // Allow scrolling as fallback if needed
 
           const loadingIndicator = document.createElement("div");
@@ -823,7 +825,7 @@ export class MeetergoIntegration {
           return;
         }
 
-        const finalHeight = Math.max(newHeight + 20, 400);
+        const finalHeight = Math.max(newHeight, 400);
 
         // Apply smooth height transition
         iframe.style.transition = "height 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)";
