@@ -349,7 +349,9 @@ export class ModalManager {
       zIndex: '1003',
       position: 'relative',
       width: '100%',
-      height: '100%',
+      maxWidth: '900px',
+      maxHeight: '90vh',
+      height: 'auto',
       backgroundColor: 'rgba(0,0,0,0)',
       borderRadius: '0.7rem',
       overflow: 'hidden',
@@ -430,8 +432,12 @@ export class ModalManager {
     
     Object.assign(iframe.style, {
       width: '100%',
-      height: '100%',
-      border: 'none'
+      height: '700px',
+      minHeight: '400px',
+      maxHeight: 'calc(90vh - 32px)',
+      border: 'none',
+      display: 'block',
+      overflow: 'hidden'
     });
 
     // Setup iframe load handler
@@ -545,6 +551,7 @@ export class ModalManager {
       });
     }
   }
+
 
   /**
    * Emit modal event
