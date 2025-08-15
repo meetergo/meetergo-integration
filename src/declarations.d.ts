@@ -109,6 +109,7 @@ export interface MeetergoSettings {
   disableModal?: boolean;
   iframeHeight?: number;
   enableAutoResize?: boolean;
+  iframeAlignment?: 'left' | 'center' | 'right';
   /**
    * Callback function that is executed after a booking is successfully completed.
    * Supports both legacy string format and new data object format.

@@ -690,13 +690,19 @@ export class MeetergoIntegration {
             return;
           }
 
-          iframe.setAttribute("src", `${link}?${params}`);
+          // Get alignment from data attribute or settings (default to center)
+          const alignment = anchor.getAttribute("data-align") || 
+                          window.meetergoSettings?.iframeAlignment || 
+                          "center";
+
+          // Add alignment to params so it can be read by the iframe content
+          const urlParams = params ? `${params}&align=${alignment}` : `align=${alignment}`;
+          iframe.setAttribute("src", `${link}?${urlParams}`);
           iframe.style.width = "100%";
           iframe.style.border = "none";
           iframe.style.overflow = "hidden";
           iframe.style.display = "block";
-          iframe.style.paddingTop = "1rem";
-          iframe.style.paddingBottom = "1rem";
+         
 
           // Use a reliable fixed height that works for most booking scenarios
           const viewportHeight = window.innerHeight;
@@ -704,6 +710,28 @@ export class MeetergoIntegration {
           iframe.style.height = `${reliableHeight}px`;
           iframe.style.minHeight = "400px";
           iframe.style.overflow = "auto"; // Allow scrolling as fallback if needed
+          
+          // Apply alignment to the container
+          if (anchor instanceof HTMLElement) {
+            // Reset any existing inline styles
+            anchor.style.display = "block";
+            anchor.style.textAlign = alignment as string;
+            
+            // For iframe alignment, we need to control the iframe's display
+            if (alignment === "left") {
+              iframe.style.marginLeft = "0";
+              iframe.style.marginRight = "auto";
+              iframe.style.maxWidth = "960px"; // Match meetergo's max width
+            } else if (alignment === "right") {
+              iframe.style.marginLeft = "auto";
+              iframe.style.marginRight = "0";
+              iframe.style.maxWidth = "960px"; // Match meetergo's max width
+            } else {
+              // center (default)
+              iframe.style.marginLeft = "auto";
+              iframe.style.marginRight = "auto";
+            }
+          }
 
           const loadingIndicator = document.createElement("div");
           loadingIndicator.className = "meetergo-spinner";

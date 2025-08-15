@@ -28,6 +28,7 @@ Set meetergo settings and load the script:
   window.meetergoSettings = {
     company: "your-company",
     enableAutoResize: true, // ✨ New: Enable auto-resize for iframes
+    iframeAlignment: "center", // ✨ New: Default iframe alignment (left, center, right)
     floatingButton: {
       position: "bottom-right",
       link: "https://cal.meetergo.com/your-booking-link",
@@ -77,6 +78,13 @@ Add a booking iframe that **automatically adjusts height** (no scrollbars needed
   link="https://cal.meetergo.com/your-booking-link"
 ></div>
 
+<!-- With custom alignment -->
+<div
+  class="meetergo-iframe"
+  link="https://cal.meetergo.com/your-booking-link"
+  data-align="left"
+></div>
+
 <!-- Disable auto-resize if needed -->
 <div
   class="meetergo-iframe"
@@ -88,6 +96,7 @@ Add a booking iframe that **automatically adjusts height** (no scrollbars needed
 **Features:**
 
 - ✅ **No scrollbars**: Automatic height adjustment (enabled by default)
+- ✅ **Custom alignment**: Set `data-align="left|center|right"` for iframe positioning
 - ✅ **Smooth transitions**: Professional animations
 - ✅ **Cross-origin support**: Works with all meetergo domains
 - ✅ **Fallback handling**: Graceful degradation if auto-resize fails
@@ -301,6 +310,7 @@ type BookingSuccessfulData = {
 interface meetergoSettings {
   company: string;
   enableAutoResize?: boolean;
+  iframeAlignment?: "left" | "center" | "right";
   floatingButton?: FloatingButtonConfig;
   sidebar?: SidebarConfig;
   videoEmbed?: VideoEmbedConfig;
