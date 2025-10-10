@@ -221,12 +221,9 @@ export class MeetergoIntegration {
         }
       );
 
+      // This should always exist since we only attach listeners to configured forms
+      // But check defensively just in case
       if (!targetListener) {
-        errorHandler.handleError({
-          message: `No form listener found for form ID: ${target.id}`,
-          level: "warning",
-          context: "MeetergoIntegration.onFormSubmit",
-        });
         return;
       }
 
@@ -252,10 +249,21 @@ export class MeetergoIntegration {
 
   private listenToForms(): void {
     try {
-      const forms = document.querySelectorAll("form");
+      // Only listen to forms that are explicitly configured in formListeners
+      const formListeners = window.meetergoSettings?.formListeners;
 
-      for (const form of forms) {
-        form.addEventListener("submit", this.onFormSubmit.bind(this), false);
+      if (!formListeners || formListeners.length === 0) {
+        return; // No form listeners configured, skip
+      }
+
+      // Attach listeners only to configured forms
+      for (const listener of formListeners) {
+        if (!listener.formId) continue;
+
+        const form = document.getElementById(listener.formId);
+        if (form instanceof HTMLFormElement) {
+          form.addEventListener("submit", this.onFormSubmit.bind(this), false);
+        }
       }
     } catch (error) {
       errorHandler.handleError({
@@ -691,18 +699,20 @@ export class MeetergoIntegration {
           }
 
           // Get alignment from data attribute or settings (default to center)
-          const alignment = anchor.getAttribute("data-align") || 
-                          window.meetergoSettings?.iframeAlignment || 
-                          "center";
+          const alignment =
+            anchor.getAttribute("data-align") ||
+            window.meetergoSettings?.iframeAlignment ||
+            "center";
 
           // Add alignment to params so it can be read by the iframe content
-          const urlParams = params ? `${params}&align=${alignment}` : `align=${alignment}`;
+          const urlParams = params
+            ? `${params}&align=${alignment}`
+            : `align=${alignment}`;
           iframe.setAttribute("src", `${link}?${urlParams}`);
           iframe.style.width = "100%";
           iframe.style.border = "none";
           iframe.style.overflow = "hidden";
           iframe.style.display = "block";
-         
 
           // Use a reliable fixed height that works for most booking scenarios
           const viewportHeight = window.innerHeight;
@@ -710,13 +720,13 @@ export class MeetergoIntegration {
           iframe.style.height = `${reliableHeight}px`;
           iframe.style.minHeight = "400px";
           iframe.style.overflow = "auto"; // Allow scrolling as fallback if needed
-          
+
           // Apply alignment to the container
           if (anchor instanceof HTMLElement) {
             // Reset any existing inline styles
             anchor.style.display = "block";
             anchor.style.textAlign = alignment as string;
-            
+
             // For iframe alignment, we need to control the iframe's display
             if (alignment === "left") {
               iframe.style.marginLeft = "0";
