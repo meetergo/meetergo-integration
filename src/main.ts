@@ -221,12 +221,9 @@ export class MeetergoIntegration {
         }
       );
 
+      // This should always exist since we only attach listeners to configured forms
+      // But check defensively just in case
       if (!targetListener) {
-        errorHandler.handleError({
-          message: `No form listener found for form ID: ${target.id}`,
-          level: "warning",
-          context: "MeetergoIntegration.onFormSubmit",
-        });
         return;
       }
 
@@ -252,10 +249,21 @@ export class MeetergoIntegration {
 
   private listenToForms(): void {
     try {
-      const forms = document.querySelectorAll("form");
+      // Only listen to forms that are explicitly configured in formListeners
+      const formListeners = window.meetergoSettings?.formListeners;
 
-      for (const form of forms) {
-        form.addEventListener("submit", this.onFormSubmit.bind(this), false);
+      if (!formListeners || formListeners.length === 0) {
+        return; // No form listeners configured, skip
+      }
+
+      // Attach listeners only to configured forms
+      for (const listener of formListeners) {
+        if (!listener.formId) continue;
+
+        const form = document.getElementById(listener.formId);
+        if (form instanceof HTMLFormElement) {
+          form.addEventListener("submit", this.onFormSubmit.bind(this), false);
+        }
       }
     } catch (error) {
       errorHandler.handleError({
@@ -718,6 +726,28 @@ export class MeetergoIntegration {
             // Set data-align attribute for CSS targeting
             anchor.setAttribute("data-align", alignment as string);
 
+            // Reset any existing inline styles
+            anchor.style.display = "block";
+            anchor.style.textAlign = alignment as string;
+
+            // For iframe alignment, we need to control the iframe's display
+            if (alignment === "left") {
+              iframe.style.marginLeft = "0";
+              iframe.style.marginRight = "auto";
+              iframe.style.maxWidth = "960px"; // Match meetergo's max width
+            } else if (alignment === "right") {
+              iframe.style.marginLeft = "auto";
+              iframe.style.marginRight = "0";
+              iframe.style.maxWidth = "960px"; // Match meetergo's max width
+            } else {
+              // center (default)
+              iframe.style.marginLeft = "auto";
+              iframe.style.marginRight = "auto";
+            }
+          }
+
+          // Apply alignment to the container
+          if (anchor instanceof HTMLElement) {
             // Reset any existing inline styles
             anchor.style.display = "block";
             anchor.style.textAlign = alignment as string;
