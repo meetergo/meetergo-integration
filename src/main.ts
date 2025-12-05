@@ -695,8 +695,10 @@ export class MeetergoIntegration {
                           window.meetergoSettings?.iframeAlignment || 
                           "center";
 
-          // Add alignment to params so it can be read by the iframe content
-          const urlParams = params ? `${params}&align=${alignment}` : `align=${alignment}`;
+          // Add alignment and embed=true params so the booking page knows it's embedded
+          const urlParams = params
+            ? `${params}&align=${alignment}&embed=true`
+            : `align=${alignment}&embed=true`;
           iframe.setAttribute("src", `${link}?${urlParams}`);
           iframe.style.width = "100%";
           iframe.style.border = "none";
@@ -713,10 +715,13 @@ export class MeetergoIntegration {
           
           // Apply alignment to the container
           if (anchor instanceof HTMLElement) {
+            // Set data-align attribute for CSS targeting
+            anchor.setAttribute("data-align", alignment as string);
+
             // Reset any existing inline styles
             anchor.style.display = "block";
             anchor.style.textAlign = alignment as string;
-            
+
             // For iframe alignment, we need to control the iframe's display
             if (alignment === "left") {
               iframe.style.marginLeft = "0";
@@ -735,10 +740,6 @@ export class MeetergoIntegration {
 
           const loadingIndicator = document.createElement("div");
           loadingIndicator.className = "meetergo-spinner";
-          loadingIndicator.style.position = "absolute";
-          loadingIndicator.style.top = "50%";
-          loadingIndicator.style.left = "50%";
-          loadingIndicator.style.transform = "translate(-50%, -50%)";
 
           const indicatorId = `meetergo-spinner-${Math.random()
             .toString(36)
@@ -751,15 +752,24 @@ export class MeetergoIntegration {
             window.meetergoSettings?.enableAutoResize !== false;
 
           if (enableResize) {
-            this.setupMinimalAutoResize(iframe);
+            this.setupMinimalAutoResize(iframe, indicatorId);
+          } else {
+            // If auto-resize is disabled, use iframe load event as fallback
+            iframe.addEventListener("load", () => {
+              const spinner = document.getElementById(indicatorId);
+              if (spinner && spinner.parentNode) {
+                spinner.parentNode.removeChild(spinner);
+              }
+            });
           }
 
-          iframe.addEventListener("load", () => {
+          // Fallback: Remove spinner after timeout if content doesn't signal ready
+          this.createTimeout(() => {
             const spinner = document.getElementById(indicatorId);
             if (spinner && spinner.parentNode) {
               spinner.parentNode.removeChild(spinner);
             }
-          });
+          }, 10000); // 10 second timeout
 
           if (anchor instanceof HTMLElement) {
             anchor.style.position = "relative";
@@ -822,12 +832,15 @@ export class MeetergoIntegration {
 
   /**
    * Performance-optimized auto-resize system with message throttling
+   * @param iframe The iframe element to monitor
+   * @param spinnerId Optional spinner ID to remove when content is ready
    */
-  private setupMinimalAutoResize(iframe: HTMLIFrameElement): void {
+  private setupMinimalAutoResize(iframe: HTMLIFrameElement, spinnerId?: string): void {
     try {
       let lastHeight = 0;
       let lastUpdateTime = 0;
       let pendingUpdate: number | null = null;
+      let spinnerRemoved = false;
       const MESSAGE_THROTTLE_MS = 100; // Max one update per 100ms
       const SIGNIFICANT_HEIGHT_CHANGE = 10; // Only update if height changes by 10px+
 
@@ -912,6 +925,15 @@ export class MeetergoIntegration {
 
           if (newHeight && newHeight > 0) {
             performHeightUpdate(newHeight);
+
+            // Remove spinner when first height message is received (content is ready)
+            if (!spinnerRemoved && spinnerId) {
+              const spinner = document.getElementById(spinnerId);
+              if (spinner && spinner.parentNode) {
+                spinner.parentNode.removeChild(spinner);
+              }
+              spinnerRemoved = true;
+            }
           }
         }
       };

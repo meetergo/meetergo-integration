@@ -465,7 +465,7 @@ export class ModalManager {
 
     // Get window parameters
     const windowParams = this.getWindowParams();
-    
+
     // Get prefill from settings if available
     let allParams = { ...windowParams };
     if (window.meetergoSettings?.prefill) {
@@ -478,10 +478,13 @@ export class ModalManager {
       });
       allParams = { ...allParams, ...filteredPrefill };
     }
-    
+
     if (existingParams) {
       allParams = { ...allParams, ...existingParams };
     }
+
+    // Always add embed=true to indicate the page is embedded
+    allParams['embed'] = 'true';
 
     Object.entries(allParams).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
