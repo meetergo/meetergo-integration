@@ -203,6 +203,10 @@ export const MeetergoCSSTemplates = {
 
     .meetergo-spinner {
       position: absolute;
+      top: 50%;
+      left: 50%;
+      margin-left: -24px;
+      margin-top: -24px;
       width: 48px;
       height: 48px;
       border: 6px solid #FFF;
@@ -211,6 +215,7 @@ export const MeetergoCSSTemplates = {
       display: inline-block;
       box-sizing: border-box;
       animation: meetergo-rotation 1s linear infinite;
+      z-index: 1002;
     }
 
     @keyframes meetergo-rotation {
@@ -227,6 +232,8 @@ export const MeetergoCSSTemplates = {
       overflow: hidden !important;
       position: relative !important;
       display: block !important;
+      width: 100% !important;
+      max-width: 100% !important;
     }
 
     .meetergo-iframe iframe {
@@ -235,6 +242,25 @@ export const MeetergoCSSTemplates = {
       overflow: hidden !important;
       display: block !important;
       transition: height 0.3s ease !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+
+    /* Centering support for iframe content alignment */
+    .meetergo-iframe[data-align="center"] iframe,
+    .meetergo-iframe:not([data-align]) iframe {
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+
+    .meetergo-iframe[data-align="left"] iframe {
+      margin-left: 0 !important;
+      margin-right: auto !important;
+    }
+
+    .meetergo-iframe[data-align="right"] iframe {
+      margin-left: auto !important;
+      margin-right: 0 !important;
     }
   `,
 
