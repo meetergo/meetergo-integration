@@ -8,6 +8,16 @@
 import { domCache } from '../utils/dom-cache';
 import { errorHandler } from '../utils/error-handler';
 import { MeetergoModalEvent } from '../declarations';
+import {
+  isValidMeetergoOrigin,
+  parseHeightFromMessage,
+  createHeightState,
+  applyHeightToIframe,
+  clearIframeTransition,
+  shouldUpdateHeight,
+  createUpdatedHeightState,
+  HeightState,
+} from '../utils/iframe-height';
 
 export interface ModalSettings {
   link: string;
@@ -22,14 +32,13 @@ export interface ModalOptions {
 export class ModalManager {
   private static instance: ModalManager;
   private lastActiveElement: Element | null = null;
-  // Removed unused currentModal property
   private eventListeners: Map<string, EventListener> = new Map();
-  private resizeObserver: ResizeObserver | null = null;
   private onEventCallback?: (event: MeetergoModalEvent) => void;
+  private trackedTimeouts: Set<number> = new Set();
+  private modalHeightState: HeightState = createHeightState();
 
   private constructor() {
     // Private constructor for singleton pattern
-    this.setupResizeObserver();
   }
 
   public static getInstance(): ModalManager {
@@ -202,6 +211,9 @@ export class ModalManager {
         }, 300);
       }
 
+      // Reset height state for next modal open
+      this.modalHeightState = createHeightState();
+
       // Restore body scrolling
       document.body.style.overflow = '';
 
@@ -349,7 +361,7 @@ export class ModalManager {
       zIndex: '1003',
       position: 'relative',
       width: '100%',
-      maxWidth: '900px',
+      maxWidth: '1040px',
       maxHeight: '90vh',
       height: 'auto',
       backgroundColor: 'rgba(0,0,0,0)',
@@ -425,14 +437,30 @@ export class ModalManager {
   private createIframe(link: string, existingParams?: Record<string, string>): HTMLIFrameElement {
     const iframe = document.createElement('iframe');
     iframe.name = 'meetergo-embedded-modal';
-    
-    // Build URL with parameters
+
+    // Build URL using URL API for clean parameter handling
+    const url = new URL(link, window.location.origin);
+
+    // Add all prefill/existing params
     const params = this.buildURLParams(existingParams);
-    iframe.setAttribute('src', `${link}?${params}`);
+    if (params) {
+      const searchParams = new URLSearchParams(params);
+      searchParams.forEach((value, key) => {
+        if (!url.searchParams.has(key)) {
+          url.searchParams.set(key, value);
+        }
+      });
+    }
+
+    // Add embed and popup params for modal mode
+    url.searchParams.set('embed', 'true');
+    url.searchParams.set('popup', 'true');
+
+    iframe.setAttribute('src', url.toString());
     
     Object.assign(iframe.style, {
       width: '100%',
-      height: '700px',
+      height: 'auto',
       minHeight: '400px',
       maxHeight: 'calc(90vh - 32px)',
       border: 'none',
@@ -541,20 +569,76 @@ export class ModalManager {
 
     document.addEventListener('keydown', keydownListener);
     this.eventListeners.set('keydown', keydownListener);
+
+    // Message listener for iframe height updates (auto-resize)
+    this.setupIframeHeightListener();
   }
 
   /**
-   * Setup resize observer for responsive behavior
+   * Setup message listener for iframe height updates from meetergo booking page
    */
-  private setupResizeObserver(): void {
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => {
-        // Handle responsive modal behavior here if needed
-        // Could adjust modal size based on container changes
-      });
-    }
+  private setupIframeHeightListener(): void {
+    const messageListener: EventListener = (evt: Event) => {
+      const event = evt as MessageEvent;
+
+      // Validate origin using shared utility (secure validation)
+      if (!isValidMeetergoOrigin(event.origin)) {
+        return;
+      }
+
+      // Parse height from message using shared utility
+      const newHeight = parseHeightFromMessage(event.data);
+      if (!newHeight) {
+        return;
+      }
+
+      const modalIframe = document.querySelector('#meetergo-modal-content iframe') as HTMLIFrameElement;
+      if (!modalIframe) {
+        return;
+      }
+
+      const { shouldUpdate, shouldThrottle } = shouldUpdateHeight(newHeight, this.modalHeightState);
+
+      if (!shouldUpdate) {
+        return;
+      }
+
+      if (shouldThrottle) {
+        if (this.modalHeightState.pendingUpdate) {
+          window.clearTimeout(this.modalHeightState.pendingUpdate);
+          this.trackedTimeouts.delete(this.modalHeightState.pendingUpdate);
+        }
+        const timeoutId = window.setTimeout(() => {
+          this.updateModalIframeHeight(modalIframe, newHeight);
+          this.modalHeightState = createUpdatedHeightState(newHeight);
+          this.trackedTimeouts.delete(timeoutId);
+        }, 100);
+        this.trackedTimeouts.add(timeoutId);
+        this.modalHeightState.pendingUpdate = timeoutId;
+        return;
+      }
+
+      this.updateModalIframeHeight(modalIframe, newHeight);
+      this.modalHeightState = createUpdatedHeightState(newHeight);
+    };
+
+    window.addEventListener('message', messageListener);
+    this.eventListeners.set('message', messageListener);
   }
 
+  /**
+   * Update modal iframe height with smooth transition
+   */
+  private updateModalIframeHeight(iframe: HTMLIFrameElement, height: number): void {
+    applyHeightToIframe(iframe, height);
+
+    // Remove transition after animation using tracked timeout
+    const timeoutId = window.setTimeout(() => {
+      clearIframeTransition(iframe);
+      this.trackedTimeouts.delete(timeoutId);
+    }, 300);
+    this.trackedTimeouts.add(timeoutId);
+  }
 
   /**
    * Emit modal event
@@ -579,14 +663,18 @@ export class ModalManager {
       // Remove event listeners
       this.eventListeners.forEach((listener, event) => {
         document.removeEventListener(event, listener as EventListener);
+        window.removeEventListener(event, listener as EventListener);
       });
       this.eventListeners.clear();
 
-      // Disconnect resize observer
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-        this.resizeObserver = null;
-      }
+      // Clear tracked timeouts
+      this.trackedTimeouts.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      this.trackedTimeouts.clear();
+
+      // Reset height state
+      this.modalHeightState = createHeightState();
 
       // Remove modal element
       const modal = domCache.getElementById('meetergo-modal');

@@ -120,16 +120,3 @@ export class DOMCache {
 
 // Export singleton instance for easy use
 export const domCache = DOMCache.getInstance();
-
-// Common element getters with caching
-export const getModalElement = (): HTMLElement | null => 
-  domCache.getElementById('meetergo-modal');
-
-export const getModalContent = (): HTMLElement | null => 
-  domCache.getElementById('meetergo-modal-content');
-
-export const getSidebar = (position: 'left' | 'right'): Element | null => 
-  domCache.querySelector(`.meetergo-sidebar-${position}`);
-
-export const getFloatingButton = (): Element | null => 
-  domCache.querySelector('.meetergo-modal-button');
