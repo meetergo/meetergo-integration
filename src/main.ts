@@ -5,6 +5,15 @@ import { cssInjector, injectAllMeetergoStyles } from "./utils/css-injector";
 import { modalManager } from "./modules/modal-manager";
 import { sidebarManager } from "./modules/sidebar-manager";
 import { videoEmbedManager } from "./modules/video-embed-manager";
+import {
+  isValidMeetergoOrigin,
+  parseHeightFromMessage,
+  createHeightState,
+  applyHeightToIframe,
+  clearIframeTransition,
+  shouldUpdateHeight,
+  createUpdatedHeightState,
+} from "./utils/iframe-height";
 
 declare global {
   interface SubmitEvent extends Event {
@@ -30,6 +39,11 @@ interface OpenModalData {
   params: Record<string, string>;
 }
 
+interface BookingSuccessfulData {
+  appointmentId?: string;
+  [key: string]: unknown;
+}
+
 export class MeetergoIntegration {
   /**
    * Stores DOM elements with bound meetergo scheduler events
@@ -39,12 +53,12 @@ export class MeetergoIntegration {
   private timeouts: Set<number> = new Set();
   private intervals: Set<number> = new Set();
   private isInitialized = false;
-  private messageHandlers: Array<{
-    handler: (event: MessageEvent) => void;
-    iframe: HTMLIFrameElement;
-  }> = [];
-  private intersectionObservers: IntersectionObserver[] = [];
-  // Remove unused lastActiveElement property
+  private trackedIframes: Map<string, { iframe: HTMLIFrameElement; spinnerId?: string }> = new Map();
+  private formListeners: Map<HTMLFormElement, (e: Event) => void> = new Map();
+  private globalHeightHandler: ((event: MessageEvent) => void) | null = null;
+  private globalClickHandler: ((e: Event) => void) | null = null;
+  private globalMessageHandler: ((e: MessageEvent) => void) | null = null;
+  private iframeHeightState: Map<string, { lastHeight: number; lastUpdateTime: number; pendingUpdate: number | null }> = new Map();
 
   constructor() {
     try {
@@ -256,13 +270,19 @@ export class MeetergoIntegration {
         return; // No form listeners configured, skip
       }
 
+      const boundHandler = this.onFormSubmit.bind(this);
+
       // Attach listeners only to configured forms
       for (const listener of formListeners) {
         if (!listener.formId) continue;
 
         const form = document.getElementById(listener.formId);
         if (form instanceof HTMLFormElement) {
-          form.addEventListener("submit", this.onFormSubmit.bind(this), false);
+          // Skip if already listening
+          if (this.formListeners.has(form)) continue;
+
+          form.addEventListener("submit", boundHandler, false);
+          this.formListeners.set(form, boundHandler);
         }
       }
     } catch (error) {
@@ -438,7 +458,8 @@ export class MeetergoIntegration {
 
   private addListeners(): void {
     try {
-      document.body.addEventListener("click", (e) => {
+      // Store click handler for cleanup
+      this.globalClickHandler = (e: Event) => {
         const target = e.target as HTMLElement;
         const button = target.closest(".meetergo-modal-button") as HTMLElement;
 
@@ -456,15 +477,13 @@ export class MeetergoIntegration {
             });
           }
         }
-      });
+      };
+      document.body.addEventListener("click", this.globalClickHandler);
 
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          this.closeModal();
-        }
-      });
+      // Note: ESC key handler is in modal-manager.ts, no duplicate needed here
 
-      window.onmessage = (e: MessageEvent<MeetergoMessageEvent>) => {
+      // Store message handler for cleanup
+      this.globalMessageHandler = (e: MessageEvent) => {
         try {
           const meetergoEvent = e.data as MeetergoMessageEvent;
 
@@ -513,6 +532,7 @@ export class MeetergoIntegration {
           });
         }
       };
+      window.addEventListener("message", this.globalMessageHandler);
     } catch (error) {
       errorHandler.handleError({
         message: "Error setting up event listeners",
@@ -699,8 +719,8 @@ export class MeetergoIntegration {
           }
 
           // Get alignment from data attribute or settings (default to center)
-          const alignment = anchor.getAttribute("data-align") || 
-                          window.meetergoSettings?.iframeAlignment || 
+          const alignment = anchor.getAttribute("data-align") ||
+                          window.meetergoSettings?.iframeAlignment ||
                           "center";
 
           // Add alignment and embed=true params so the booking page knows it's embedded
@@ -712,42 +732,18 @@ export class MeetergoIntegration {
           iframe.style.border = "none";
           iframe.style.overflow = "hidden";
           iframe.style.display = "block";
-         
 
           // Use a reliable fixed height that works for most booking scenarios
-          const viewportHeight = window.innerHeight;
-          const reliableHeight = this.calculateReliableHeight(viewportHeight);
+          const reliableHeight = this.calculateReliableHeight();
           iframe.style.height = `${reliableHeight}px`;
           iframe.style.minHeight = "400px";
           iframe.style.overflow = "auto"; // Allow scrolling as fallback if needed
-          
+
           // Apply alignment to the container
           if (anchor instanceof HTMLElement) {
             // Set data-align attribute for CSS targeting
             anchor.setAttribute("data-align", alignment as string);
 
-            // Reset any existing inline styles
-            anchor.style.display = "block";
-            anchor.style.textAlign = alignment as string;
-
-            // For iframe alignment, we need to control the iframe's display
-            if (alignment === "left") {
-              iframe.style.marginLeft = "0";
-              iframe.style.marginRight = "auto";
-              iframe.style.maxWidth = "960px"; // Match meetergo's max width
-            } else if (alignment === "right") {
-              iframe.style.marginLeft = "auto";
-              iframe.style.marginRight = "0";
-              iframe.style.maxWidth = "960px"; // Match meetergo's max width
-            } else {
-              // center (default)
-              iframe.style.marginLeft = "auto";
-              iframe.style.marginRight = "auto";
-            }
-          }
-
-          // Apply alignment to the container
-          if (anchor instanceof HTMLElement) {
             // Reset any existing inline styles
             anchor.style.display = "block";
             anchor.style.textAlign = alignment as string;
@@ -832,312 +828,136 @@ export class MeetergoIntegration {
   }
 
   /**
-   * Calculate a reliable height that eliminates scrollbars for most booking scenarios
+   * Get initial iframe height (auto-resize will adjust as needed)
    */
-  private calculateReliableHeight(viewportHeight: number): number {
-    // Check if user has configured a custom height
+  private calculateReliableHeight(): number {
+    // Use custom height if configured, otherwise use sensible default
     const customHeight = window.meetergoSettings?.iframeHeight;
-    if (
-      customHeight &&
-      typeof customHeight === "number" &&
-      customHeight > 400
-    ) {
+    if (customHeight && typeof customHeight === "number" && customHeight > 400) {
       return customHeight;
     }
-
-    // Base height that works for most booking forms (based on your testing: 1000px+ needed)
-    const baseHeight = 1200; // Start higher to prevent scrollbars
-
-    // Adjust based on viewport size
-    const viewportAdjustedHeight = Math.max(viewportHeight * 0.8, 1000);
-
-    // Use the larger of the two, but cap at reasonable maximum
-    const calculatedHeight = Math.max(baseHeight, viewportAdjustedHeight);
-    const maxHeight = Math.min(viewportHeight * 0.95, 1600);
-
-    const finalHeight = Math.min(calculatedHeight, maxHeight);
-
-    return finalHeight;
+    // Default height - auto-resize will adjust once content loads
+    return 800;
   }
 
   /**
-   * Performance-optimized auto-resize system with message throttling
-   * @param iframe The iframe element to monitor
-   * @param spinnerId Optional spinner ID to remove when content is ready
+   * Setup global message handler for all iframe height updates (single handler, not one per iframe)
+   */
+  private setupGlobalHeightListener(): void {
+    if (this.globalHeightHandler) return; // Already setup
+
+    this.globalHeightHandler = (event: MessageEvent) => {
+      // Validate origin using shared utility
+      if (!isValidMeetergoOrigin(event.origin)) {
+        return;
+      }
+
+      // Parse height from message using shared utility
+      const newHeight = parseHeightFromMessage(event.data);
+      if (!newHeight) {
+        return;
+      }
+
+      // Find the iframe that sent this message by matching event.source
+      let matchedIframeId: string | null = null;
+      let matchedIframe: HTMLIFrameElement | null = null;
+      let matchedSpinnerId: string | undefined = undefined;
+
+      this.trackedIframes.forEach((data, iframeId) => {
+        if (!document.contains(data.iframe)) {
+          // Clean up stale references
+          this.trackedIframes.delete(iframeId);
+          this.iframeHeightState.delete(iframeId);
+          return;
+        }
+
+        // Match the message source to the iframe's contentWindow
+        if (data.iframe.contentWindow === event.source) {
+          matchedIframeId = iframeId;
+          matchedIframe = data.iframe;
+          matchedSpinnerId = data.spinnerId;
+        }
+      });
+
+      // Only update the iframe that sent the message
+      if (!matchedIframe || !matchedIframeId) {
+        return;
+      }
+
+      // Remove spinner on first height message (content is ready)
+      if (matchedSpinnerId) {
+        const spinner = document.getElementById(matchedSpinnerId);
+        if (spinner && spinner.parentNode) {
+          spinner.parentNode.removeChild(spinner);
+        }
+        // Clear spinner ID so we don't try to remove it again
+        const trackedData = this.trackedIframes.get(matchedIframeId);
+        if (trackedData) {
+          trackedData.spinnerId = undefined;
+        }
+      }
+
+      const state = this.iframeHeightState.get(matchedIframeId) || createHeightState();
+      const { shouldUpdate, shouldThrottle } = shouldUpdateHeight(newHeight, state);
+
+      if (!shouldUpdate) {
+        return;
+      }
+
+      // Capture values for closure
+      const iframeToUpdate = matchedIframe;
+      const iframeIdToUpdate = matchedIframeId;
+
+      if (shouldThrottle) {
+        if (state.pendingUpdate) {
+          window.clearTimeout(state.pendingUpdate);
+        }
+        state.pendingUpdate = window.setTimeout(() => {
+          this.updateIframeHeight(iframeToUpdate, newHeight, iframeIdToUpdate);
+        }, 100);
+        this.iframeHeightState.set(iframeIdToUpdate, state);
+        return;
+      }
+
+      this.updateIframeHeight(iframeToUpdate, newHeight, iframeIdToUpdate);
+    };
+
+    window.addEventListener("message", this.globalHeightHandler);
+  }
+
+  /**
+   * Update iframe height with smooth transition
+   */
+  private updateIframeHeight(iframe: HTMLIFrameElement, height: number, iframeId: string): void {
+    applyHeightToIframe(iframe, height);
+
+    // Remove transition after animation using tracked timeout
+    this.createTimeout(() => {
+      clearIframeTransition(iframe);
+    }, 300);
+
+    // Update state using shared utility
+    this.iframeHeightState.set(iframeId, createUpdatedHeightState(Math.max(height, 400)));
+  }
+
+  /**
+   * Register iframe for auto-resize (uses single global handler)
    */
   private setupMinimalAutoResize(iframe: HTMLIFrameElement, spinnerId?: string): void {
     try {
-      let lastHeight = 0;
-      let lastUpdateTime = 0;
-      let pendingUpdate: number | null = null;
-      let spinnerRemoved = false;
-      const MESSAGE_THROTTLE_MS = 100; // Max one update per 100ms
-      const SIGNIFICANT_HEIGHT_CHANGE = 10; // Only update if height changes by 10px+
+      // Ensure global handler is setup
+      this.setupGlobalHeightListener();
 
-      const performHeightUpdate = (newHeight: number) => {
-        const currentTime = Date.now();
-        const heightDifference = Math.abs(newHeight - lastHeight);
-
-        // Skip if height change is too small (prevents jitter)
-        if (heightDifference < SIGNIFICANT_HEIGHT_CHANGE) {
-          return;
-        }
-
-        // Skip if updating too frequently (performance optimization)
-        if (currentTime - lastUpdateTime < MESSAGE_THROTTLE_MS) {
-          // Schedule the update for later instead of dropping it
-          if (pendingUpdate) {
-            window.clearTimeout(pendingUpdate);
-          }
-          pendingUpdate = window.setTimeout(() => {
-            performHeightUpdate(newHeight);
-            pendingUpdate = null;
-          }, MESSAGE_THROTTLE_MS);
-          return;
-        }
-
-        const finalHeight = Math.max(newHeight, 400);
-
-        // Apply smooth height transition
-        iframe.style.transition = "height 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)";
-        iframe.style.height = `${finalHeight}px`;
-
-        // Auto-scroll into view if iframe is above viewport (like Calendly)
-        this.createTimeout(() => {
-          const iframeRect = iframe.getBoundingClientRect();
-          if (iframeRect.top < -50) {
-            // Only scroll if significantly above viewport
-            iframe.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-        }, 100);
-
-        // Remove transition after animation
-        this.createTimeout(() => {
-          iframe.style.transition = "";
-        }, 300);
-
-        // Update tracking variables
-        lastHeight = finalHeight;
-        lastUpdateTime = currentTime;
-      };
-
-      const messageHandler = (event: MessageEvent) => {
-        // Accept messages from meetergo domains or localhost for testing
-        if (
-          !this.isValidMeetergoOrigin(event.origin) &&
-          !event.origin.includes("localhost")
-        ) {
-          return;
-        }
-
-        if (event.data && typeof event.data === "object") {
-          let newHeight: number | null = null;
-
-          // Handle Calendly-style height messages (primary)
-          if (
-            event.data.event === "meetergo:page_height" &&
-            event.data.payload?.height
-          ) {
-            newHeight = parseInt(event.data.payload.height, 10);
-          }
-          // Handle direct height messages (backup)
-          else if (
-            event.data.type === "meetergo:height-update" &&
-            event.data.height
-          ) {
-            newHeight = parseInt(event.data.height, 10);
-          } else if (
-            event.data.type === "meetergo:scroll-height" &&
-            event.data.scrollHeight
-          ) {
-            newHeight = parseInt(event.data.scrollHeight, 10);
-          }
-
-          if (newHeight && newHeight > 0) {
-            performHeightUpdate(newHeight);
-
-            // Remove spinner when first height message is received (content is ready)
-            if (!spinnerRemoved && spinnerId) {
-              const spinner = document.getElementById(spinnerId);
-              if (spinner && spinner.parentNode) {
-                spinner.parentNode.removeChild(spinner);
-              }
-              spinnerRemoved = true;
-            }
-          }
-        }
-      };
-
-      window.addEventListener("message", messageHandler);
-
-      // Store for cleanup
-      if (!this.messageHandlers) {
-        this.messageHandlers = [];
-      }
-      this.messageHandlers.push({ handler: messageHandler, iframe });
-    } catch (error) {
-      console.warn(
-        "meetergo auto-resize: Performance-optimized setup failed",
-        error
-      );
-    }
-  }
-
-  /**
-   * Check if origin is a valid meetergo domain
-   */
-  private isValidMeetergoOrigin(origin: string): boolean {
-    const validOrigins = [
-      "https://cal.meetergo.com",
-      "https://meetergo.com",
-      "https://www.meetergo.com",
-      "https://app.meetergo.com",
-    ];
-    return validOrigins.some((validOrigin) => origin.startsWith(validOrigin));
-  }
-
-  /**
-   * Request height from iframe content using multiple message types
-   */
-  private requestIframeHeight(iframe: HTMLIFrameElement): void {
-    try {
-      if (iframe.contentWindow) {
-        // Send multiple types of height request messages
-        const messages = [
-          { type: "meetergo:request-height" },
-          { type: "iframe-resizer", method: "size" },
-          { type: "getHeight" },
-          { action: "resize" },
-          { event: "requestHeight" },
-          { type: "resize-iframe" },
-          { method: "getHeight" },
-          { resize: true },
-        ];
-
-        messages.forEach((message, index) => {
-          try {
-            if (iframe.contentWindow) {
-              iframe.contentWindow.postMessage(message, "*");
-            }
-          } catch (e) {
-            console.warn(
-              `meetergo auto-resize: Failed to send message #${index + 1}`,
-              e
-            );
-          }
-        });
-
-        // Also try sending to specific meetergo origins
-        const origins = [
-          "https://cal.meetergo.com",
-          "https://app.meetergo.com",
-          "https://meetergo.com",
-        ];
-
-        origins.forEach((origin) => {
-          try {
-            if (iframe.contentWindow) {
-              iframe.contentWindow.postMessage(
-                { type: "meetergo:request-height" },
-                origin
-              );
-            }
-          } catch (e) {
-            console.warn(
-              `meetergo auto-resize: Failed to send to origin ${origin}`,
-              e
-            );
-          }
-        });
-      }
-    } catch (error) {
-      console.warn(
-        "meetergo auto-resize: requestIframeHeight failed, using observers",
-        error
-      );
-      this.setupIntersectionObserver(iframe);
-    }
-  }
-
-  /**
-   * Fallback method using intersection observer to detect content changes
-   */
-  private setupIntersectionObserver(iframe: HTMLIFrameElement): void {
-    if (typeof IntersectionObserver === "undefined") return;
-
-    try {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            this.adjustIframeHeight(iframe);
-          }
-        });
+      // Generate unique ID and track the iframe with its spinner
+      const iframeId = `iframe-${Math.random().toString(36).substring(2, 11)}`;
+      this.trackedIframes.set(iframeId, { iframe, spinnerId });
+      this.iframeHeightState.set(iframeId, {
+        lastHeight: 0,
+        lastUpdateTime: 0,
+        pendingUpdate: null,
       });
-
-      observer.observe(iframe);
-
-      // Store observer for cleanup
-      if (!this.intersectionObservers) {
-        this.intersectionObservers = [];
-      }
-      this.intersectionObservers.push(observer);
     } catch (error) {
-      errorHandler.handleError({
-        message: "Setup intersection observer failed",
-        level: "warning",
-        context: "setupIntersectionObserver",
-        error: error as Error,
-      });
-    }
-  }
-
-  /**
-   * Try to adjust iframe height based on content
-   */
-  private adjustIframeHeight(iframe: HTMLIFrameElement): void {
-    try {
-      // This only works for same-origin iframes
-      if (iframe.contentDocument) {
-        const contentHeight = Math.max(
-          iframe.contentDocument.body?.scrollHeight || 0,
-          iframe.contentDocument.documentElement?.scrollHeight || 0
-        );
-
-        if (contentHeight > 0) {
-          iframe.style.height = `${Math.max(contentHeight, 400)}px`;
-        }
-      } else {
-        // Cross-origin iframe - use ResizeObserver as fallback
-        this.setupResizeObserver(iframe);
-      }
-    } catch (error) {
-      // Expected for cross-origin iframes
-      this.setupResizeObserver(iframe);
-    }
-  }
-
-  /**
-   * Setup ResizeObserver for iframe container
-   */
-  private setupResizeObserver(iframe: HTMLIFrameElement): void {
-    if (typeof ResizeObserver === "undefined") return;
-
-    try {
-      const observer = new ResizeObserver(() => {
-        // Periodically request height updates
-        this.requestIframeHeight(iframe);
-      });
-
-      if (iframe.parentElement) {
-        observer.observe(iframe.parentElement);
-      }
-    } catch (error) {
-      errorHandler.handleError({
-        message: "Setup resize observer failed",
-        level: "warning",
-        context: "setupResizeObserver",
-        error: error as Error,
-      });
+      console.warn("meetergo auto-resize: Setup failed", error);
     }
   }
 
@@ -1415,25 +1235,35 @@ export class MeetergoIntegration {
       });
       this.boundElements.clear();
 
-      // Clean up message handlers
-      this.messageHandlers.forEach(({ handler }) => {
-        try {
-          window.removeEventListener("message", handler);
-        } catch (error) {
-          // Handler might already be removed
-        }
-      });
-      this.messageHandlers = [];
+      // Clean up global height handler
+      if (this.globalHeightHandler) {
+        window.removeEventListener("message", this.globalHeightHandler);
+        this.globalHeightHandler = null;
+      }
+      this.trackedIframes.clear();
+      this.iframeHeightState.clear();
 
-      // Clean up intersection observers
-      this.intersectionObservers.forEach((observer) => {
+      // Clean up global click handler
+      if (this.globalClickHandler) {
+        document.body.removeEventListener("click", this.globalClickHandler);
+        this.globalClickHandler = null;
+      }
+
+      // Clean up global message handler
+      if (this.globalMessageHandler) {
+        window.removeEventListener("message", this.globalMessageHandler);
+        this.globalMessageHandler = null;
+      }
+
+      // Clean up form listeners
+      this.formListeners.forEach((handler, form) => {
         try {
-          observer.disconnect();
+          form.removeEventListener("submit", handler);
         } catch (error) {
-          // Observer might already be disconnected
+          // Form might have been removed from DOM
         }
       });
-      this.intersectionObservers = [];
+      this.formListeners.clear();
 
       // Cleanup all modules
       modalManager.cleanup();
