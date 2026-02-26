@@ -549,7 +549,7 @@ export class MeetergoIntegration {
 
     if (divIframe) {
       const linkAttr = divIframe.getAttribute("link");
-      if (linkAttr) {
+      if (linkAttr && typeof linkAttr === "string") {
         const queryString = linkAttr.split("?")[1];
         if (queryString) {
           const urlParams = new URLSearchParams(queryString);
