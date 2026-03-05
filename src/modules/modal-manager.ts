@@ -465,20 +465,9 @@ export class ModalManager {
       maxHeight: 'calc(90vh - 32px)',
       border: 'none',
       display: 'block',
-      overflow: 'hidden'
-    });
-
-    // Setup iframe load handler
-    iframe.addEventListener('load', () => {
-      // Hide spinner when iframe loads
-      const modal = domCache.getElementById('meetergo-modal');
-      if (modal) {
-        const spinners = modal.getElementsByClassName('meetergo-spinner');
-        if (spinners.length > 0) {
-          const spinner = spinners[0] as HTMLElement;
-          spinner.style.display = 'none';
-        }
-      }
+      overflow: 'hidden',
+      opacity: '0',
+      transition: 'opacity 0.2s ease'
     });
 
     return iframe;
@@ -586,6 +575,23 @@ export class ModalManager {
         return;
       }
 
+      // Reveal iframe when content is ready (prevents white flash)
+      if (event.data?.event === 'meetergo:content-ready') {
+        const iframe = document.querySelector('#meetergo-modal-content iframe') as HTMLIFrameElement;
+        if (iframe) {
+          iframe.style.opacity = '1';
+        }
+        // Also hide spinner
+        const modal = domCache.getElementById('meetergo-modal');
+        if (modal) {
+          const spinners = modal.getElementsByClassName('meetergo-spinner');
+          if (spinners.length > 0) {
+            (spinners[0] as HTMLElement).style.display = 'none';
+          }
+        }
+        return;
+      }
+
       // Parse height from message using shared utility
       const newHeight = parseHeightFromMessage(event.data);
       if (!newHeight) {
@@ -630,6 +636,10 @@ export class ModalManager {
    * Update modal iframe height with smooth transition
    */
   private updateModalIframeHeight(iframe: HTMLIFrameElement, height: number): void {
+    // Reveal iframe if still hidden (fallback for content-ready)
+    if (iframe.style.opacity === '0') {
+      iframe.style.opacity = '1';
+    }
     applyHeightToIframe(iframe, height);
 
     // Remove transition after animation using tracked timeout
