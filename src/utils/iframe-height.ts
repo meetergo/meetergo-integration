@@ -26,16 +26,6 @@ const DEFAULT_CONFIG: Required<HeightUpdateConfig> = {
 };
 
 /**
- * Valid meetergo origins for message validation
- */
-const VALID_MEETERGO_ORIGINS = [
-  'https://cal.meetergo.com',
-  'https://meetergo.com',
-  'https://www.meetergo.com',
-  'https://app.meetergo.com',
-];
-
-/**
  * Check if origin is a valid meetergo domain
  */
 export function isValidMeetergoOrigin(origin: string): boolean {
@@ -43,7 +33,8 @@ export function isValidMeetergoOrigin(origin: string): boolean {
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
     return true;
   }
-  return VALID_MEETERGO_ORIGINS.some((validOrigin) => origin === validOrigin || origin.startsWith(validOrigin));
+  // Accept all *.meetergo.com subdomains (cal, my, www, etc.)
+  return origin === 'https://meetergo.com' || (origin.endsWith('.meetergo.com') && origin.startsWith('https://'));
 }
 
 /**
