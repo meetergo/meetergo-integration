@@ -1,442 +1,377 @@
 # meetergo Integration Library
 
-**Professional booking integration for websites with TypeScript support, modular architecture, and enhanced user experience.**
+**Embed meetergo scheduling into any website — modals, sidebars, inline iframes, floating buttons, and video widgets.**
 
-[![Version](https://img.shields.io/badge/version-v3.0-blue.svg)](https://github.com/meetergo/meetergo-integration)
+[![Version](https://img.shields.io/badge/version-v4.0-blue.svg)](https://github.com/meetergo/meetergo-integration)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178c6.svg)](https://www.typescriptlang.org/)
 [![AWS CDN](https://img.shields.io/badge/AWS-CDN%20Ready-orange.svg)](https://aws.amazon.com/cloudfront/)
 
-Easily integrate meetergo scheduling into your website with iframes, booking buttons, sidebars, video embeds, and form integrations. Now featuring **auto-resize iframes** (no scrollbars!), **improved video controls**, and **professional error handling**.
+## Quick Start
 
-## ✨ What's New in v3.0
-
-- 🎯 **Auto-Resize Iframes**: No more scrollbars! Iframes automatically adjust height for professional appearance
-- 🎬 **Enhanced Video Controls**: Working progress bar, mute button, and smooth interactions
-- 🔧 **TypeScript Support**: Full type safety with comprehensive interfaces
-- 🏗️ **Modular Architecture**: Cleaner, more maintainable codebase
-- 🚨 **Better Error Handling**: User-visible notifications instead of console-only logging
-- 🧠 **Memory Management**: Proper cleanup to prevent memory leaks
-- ⚡ **Performance Optimized**: DOM caching and efficient rendering
-- 🌐 **AWS CDN Ready**: Production-ready deployment on CloudFront
-
-## 🚀 Quick Start
-
-Set meetergo settings and load the script:
+Paste the loader snippet into `<head>` — that's it:
 
 ```html
 <script>
+  (function(w,d,s,u){
+    w.meetergo = w.meetergo || function(){ (w.meetergo.q = w.meetergo.q || []).push(arguments); };
+    w.meetergo.version = '4';
+    var e = d.createElement(s); e.async = 1; e.src = u;
+    d.head.appendChild(e);
+  })(window, document, 'script', 'https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js');
+
+  meetergo('init', {
+    onBookingSuccessful: function(data) {
+      console.log('Booking confirmed!', data);
+    }
+  });
+</script>
+```
+
+## What's New in v4
+
+- **Queue-based API** — `meetergo('init', {...})` replaces `window.meetergoSettings`. Calls made before the script loads are automatically queued and replayed.
+- **Namespace isolation** — run multiple independent embeds on one page, each with its own modal, sidebar, and event bus.
+- **Zero-JS data attribute API** — bind any element with `data-meetergo-link` without writing JavaScript.
+- **Prerendering** — warm up iframes before the user clicks for instant-open modals.
+- **Full event bus** — subscribe to any SDK event with `meetergo('on', {...})`.
+- **v3 backwards compatible** — existing `class="meetergo-modal-button"` buttons and `window.meetergoSettings` continue to work.
+
+---
+
+## Integration Methods
+
+### Inline Embed
+
+Add `class="meetergo-iframe"` and `data-src` to any element:
+
+```html
+<div
+  class="meetergo-iframe"
+  data-src="https://cal.meetergo.com/your-booking-link"
+  style="min-height: 600px;">
+</div>
+```
+
+Optional attributes:
+- `data-align="left|center|right"` — horizontal alignment
+- `data-prefill-email`, `data-prefill-name`, etc. — pre-fill fields
+
+### Modal (Popup)
+
+**Data attribute (no JS):**
+```html
+<button data-meetergo-link="https://cal.meetergo.com/your-booking-link">
+  Book Now
+</button>
+```
+
+**JavaScript API:**
+```js
+meetergo('modal', { link: 'https://cal.meetergo.com/your-booking-link' });
+```
+
+**v3 backwards compatible (still works):**
+```html
+<button class="meetergo-modal-button" link="https://cal.meetergo.com/your-booking-link">
+  Book Now
+</button>
+```
+
+### Floating Button
+
+```js
+meetergo('init', {
+  floatingButton: {
+    link: 'https://cal.meetergo.com/your-booking-link',
+    text: 'Book Appointment',
+    position: 'bottom-right', // top-left, top-center, top-right, middle-left, middle-right, bottom-left, bottom-center, bottom-right
+    backgroundColor: '#0A64BC',
+    textColor: '#FFFFFF',
+    animation: 'pulse', // pulse, bounce, slide-in, none
+  }
+});
+```
+
+### Sidebar
+
+```js
+meetergo('init', {
+  sidebar: {
+    link: 'https://cal.meetergo.com/your-booking-link',
+    position: 'right', // left or right
+    width: '400px',
+    buttonText: 'Book Appointment',
+    buttonIcon: 'CalendarPlus2',
+    buttonPosition: 'top-right',
+    backgroundColor: '#0A64BC',
+    textColor: '#FFFFFF',
+  }
+});
+```
+
+### Video Widget
+
+```js
+meetergo('init', {
+  videoEmbed: {
+    videoSrc: 'https://video.meetergo.com/your-video.m3u8',
+    posterImage: 'https://video.meetergo.com/your-poster.jpg',
+    bookingLink: 'https://cal.meetergo.com/your-booking-link',
+    bookingCta: 'Book Now 👉',
+    videoCta: 'Watch me!',
+    buttonColor: '#196EF5',
+    position: 'bottom-right',
+    size: { width: '130px', height: '200px' },
+  }
+});
+```
+
+### Prefill
+
+Pass user data to pre-fill booking forms:
+
+```js
+meetergo('init', {
+  prefill: {
+    email: 'jane@example.com',
+    firstname: 'Jane',
+    lastname: 'Smith',
+    phone: '+49123456789',
+  }
+});
+```
+
+Or via data attributes on modal triggers:
+
+```html
+<button
+  data-meetergo-link="https://cal.meetergo.com/your-booking-link"
+  data-meetergo-prefill-email="jane@example.com"
+  data-meetergo-prefill-name="Jane Smith">
+  Book Now
+</button>
+```
+
+### Form Listeners
+
+Auto-open modal when a form is submitted:
+
+```js
+meetergo('init', {
+  formListeners: [
+    {
+      formId: 'contact-form',
+      link: 'https://cal.meetergo.com/your-booking-link',
+    }
+  ]
+});
+```
+
+---
+
+## Events
+
+Subscribe to SDK events:
+
+```js
+meetergo('on', {
+  action: 'bookingSuccessful',
+  callback: function(envelope) {
+    console.log('Booked!', envelope.data);
+  }
+});
+```
+
+Available events:
+
+| Event | Fired when |
+|---|---|
+| `linkReady` | SDK has bound all elements |
+| `bookingSuccessful` | A booking was completed |
+| `bookingCancelled` | A booking was cancelled |
+| `bookingRescheduled` | A booking was rescheduled |
+| `modalOpened` | Modal opened |
+| `modalClosed` | Modal closed |
+| `sidebarOpened` | Sidebar opened |
+| `sidebarClosed` | Sidebar closed |
+| `videoPlay` | Video started playing |
+| `videoPause` | Video paused |
+| `videoExpanded` | Video widget expanded |
+| `bookerViewed` | Booking page was viewed inside iframe |
+
+Convenience callbacks in `init` config:
+
+```js
+meetergo('init', {
+  onBookingSuccessful: function(data) { ... },
+  onEvent: function(envelope) { ... },  // all events
+});
+```
+
+---
+
+## Namespace Isolation
+
+Run multiple independent embed instances on one page:
+
+```js
+meetergo('init', { ns: 'sales', floatingButton: { link: '...', backgroundColor: '#dc2626' } });
+meetergo('init', { ns: 'support', floatingButton: { link: '...', backgroundColor: '#059669' } });
+```
+
+Target a specific namespace from a button:
+
+```html
+<button data-meetergo-link="https://cal.meetergo.com/sales" data-meetergo-ns="sales">
+  Talk to Sales
+</button>
+```
+
+---
+
+## Prerendering
+
+Warm up a booking page before the user clicks — modal opens instantly:
+
+```js
+meetergo('prerender', { link: 'https://cal.meetergo.com/your-booking-link' });
+```
+
+Prerendering also happens automatically for floating button links.
+
+---
+
+## JavaScript API Reference
+
+```js
+// Init / configure
+meetergo('init', config)
+
+// Modal
+meetergo('modal', { link })
+meetergo('closeModal')
+
+// Inline embed (programmatic)
+meetergo('inline', { link, elementOrSelector: '#my-container' })
+
+// Prerender
+meetergo('prerender', { link })
+
+// Events
+meetergo('on',   { action, callback })
+meetergo('off',  { action, callback })
+meetergo('once', { action, callback })
+
+// Prefill
+meetergo('setPrefill', { email, firstname, lastname, phone })
+
+// Theme (live update)
+meetergo('ui', { cssVars: { '--mg-brand': '#7c3aed' } })
+
+// Destroy
+meetergo('destroy')
+
+// Direct namespace access
+meetergo.ns['default'].openModal(link)
+meetergo.ns['sales'].toggleSidebar()
+```
+
+---
+
+## Theming
+
+Override CSS variables via `ui.cssVars`:
+
+```js
+meetergo('init', {
+  ui: {
+    cssVars: {
+      '--mg-brand':       '#7c3aed',
+      '--mg-brand-hover': '#6d28d9',
+    }
+  }
+});
+```
+
+---
+
+## Migration from v3
+
+v4 is backwards compatible — no immediate changes required. To adopt the new API:
+
+**Before (v3):**
+```html
+<script>
   window.meetergoSettings = {
-    company: "your-company",
-    enableAutoResize: true, // ✨ New: Enable auto-resize for iframes
-    iframeAlignment: "center", // ✨ New: Default iframe alignment (left, center, right)
-    floatingButton: {
-      position: "bottom-right",
-      link: "https://cal.meetergo.com/your-booking-link",
-      text: "Book Appointment",
-      animation: "pulse",
-      backgroundColor: "#0A64BC",
-      textColor: "#FFFFFF",
-    },
-    prefill: {
-      firstname: "John",
-      lastname: "Smith",
-      email: "john@example.com",
-      phone: "+1234567890",
-    },
-    // ✨ New: Enhanced callbacks
-    onSuccess: function (data) {
-      console.log("Booking successful!", data);
-      // Handle both legacy string and new object formats
-      if (typeof data === "string") {
-        // Legacy: data is appointment ID
-        console.log("Appointment ID:", data);
-      } else {
-        // New: data is BookingSuccessfulData object
-        console.log("Booking details:", data);
-      }
-    },
-    onEvent: function (event) {
-      console.log("meetergo event:", event);
-    },
+    floatingButton: { link: '...', position: 'bottom-right' },
+    onSuccess: function(data) { ... },
   };
 </script>
-
-<!-- Production CDN (Latest) -->
 <script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v3.js"></script>
 ```
 
-## 📋 Integration Methods
-
-### 🖼️ Auto-Resize Iframe Embedding
-
-Add a booking iframe that **automatically adjusts height** (no scrollbars needed!):
-
+**After (v4):**
 ```html
-<!-- ✨ Auto-resizing iframe (enabled by default) -->
-<div
-  class="meetergo-iframe"
-  link="https://cal.meetergo.com/your-booking-link"
-></div>
+<script>
+  (function(w,d,s,u){
+    w.meetergo = w.meetergo || function(){ (w.meetergo.q = w.meetergo.q || []).push(arguments); };
+    w.meetergo.version = '4';
+    var e = d.createElement(s); e.async = 1; e.src = u;
+    d.head.appendChild(e);
+  })(window, document, 'script', 'https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js');
 
-<!-- With custom alignment -->
-<div
-  class="meetergo-iframe"
-  link="https://cal.meetergo.com/your-booking-link"
-  data-align="left"
-></div>
-
-<!-- Disable auto-resize if needed -->
-<div
-  class="meetergo-iframe"
-  link="https://cal.meetergo.com/your-booking-link"
-  data-resize="false"
-></div>
+  meetergo('init', {
+    floatingButton: { link: '...', position: 'bottom-right' },
+    onBookingSuccessful: function(data) { ... },
+  });
+</script>
 ```
 
-**Features:**
-
-- ✅ **No scrollbars**: Automatic height adjustment (enabled by default)
-- ✅ **Custom alignment**: Set `data-align="left|center|right"` for iframe positioning
-- ✅ **Smooth transitions**: Professional animations
-- ✅ **Cross-origin support**: Works with all meetergo domains
-- ✅ **Fallback handling**: Graceful degradation if auto-resize fails
-- ✅ **Optional disable**: Set `data-resize="false"` to disable auto-resize
-
-### 🎭 Modal Booking Buttons
-
-Any element can open a booking modal:
-
+**Inline embed attribute change:**
 ```html
-<button
-  class="meetergo-modal-button"
-  link="https://cal.meetergo.com/your-booking-link"
->
-  Book Now
-</button>
-
-<!-- With automatic styling -->
-<button
-  class="meetergo-styled-button meetergo-modal-button"
-  link="https://cal.meetergo.com/your-booking-link"
->
-  Book Appointment
-</button>
-```
-
-### 🎈 Floating Button
-
-Customizable floating action button:
-
-```javascript
-floatingButton: {
-  position: "bottom-right", // 9 positions available
-  link: "https://cal.meetergo.com/your-booking-link",
-  text: "Book Meeting",
-  animation: "pulse", // pulse, bounce, slide-in, none
-  backgroundColor: "#0A64BC",
-  textColor: "#FFFFFF"
-}
-```
-
-### 📱 Collapsible Sidebar
-
-Professional sidebar with toggle button:
-
-```javascript
-sidebar: {
-  position: "right", // left or right
-  width: "400px",
-  link: "https://cal.meetergo.com/your-booking-link",
-  buttonText: "Open Scheduler",
-  buttonIcon: "calendar", // Lucide icons
-  buttonPosition: "middle-right",
-  backgroundColor: "#0A64BC",
-  textColor: "#FFFFFF"
-}
-```
-
-**Available icons:** `calendar`, `clock`, `user`, `mail`, `phone`, `message-square`
-
-### 🎬 Enhanced Video Embed
-
-Interactive video widget with **improved controls**:
-
-```javascript
-videoEmbed: {
-  videoSrc: "https://video.meetergo.com/your-video.m3u8", // HLS or MP4
-  posterImage: "https://video.meetergo.com/your-poster.jpg",
-  bookingLink: "https://cal.meetergo.com/your-booking-link",
-
-  // ✨ Enhanced options
-  position: "bottom-left",
-  buttonColor: "#196EF5",
-  bookingCta: "Book Appointment 👉",
-  videoCta: "Click to watch!",
-  size: { width: "140px", height: "210px" },
-  isRound: false
-}
-```
-
-**✨ New Video Features:**
-
-- 🎯 **Working Progress Bar**: Only shows when video is expanded and playing
-- 🔇 **Functional Mute Button**: Click to toggle audio with visual feedback
-- 🎬 **Smooth Controls**: Responsive play/pause and progress tracking
-- 📱 **Click to Expand**: Mini preview expands to full player
-- 🔄 **Auto-restart**: Video loops seamlessly
-- 📐 **HLS Support**: Supports adaptive streaming
-
-### 📝 Form Integration
-
-Trigger booking modals from form submissions:
-
-```javascript
-formListeners: [
-  {
-    formId: "contact-form",
-    link: "https://cal.meetergo.com/your-booking-link",
-  },
-];
-```
-
-## 🔧 JavaScript API
-
-### Enhanced Methods
-
-```javascript
-// ✨ New: Check if integration is ready
-if (window.meetergo.isReady()) {
-  console.log("meetergo is ready!");
-}
-
-// ✨ New: Get system status
-const status = window.meetergo.getStatus();
-console.log("Status:", status);
-
-// Set prefill data with TypeScript support
-window.meetergo.setPrefill({
-  firstname: "John",
-  lastname: "Smith",
-  email: "john@example.com",
-  phone: "+1234567890",
-  company: "Acme Corp",
-});
-
-// Launch scheduler programmatically
-window.meetergo.launchScheduler("https://cal.meetergo.com/your-link", {
-  firstname: "Jane",
-  email: "jane@example.com",
-});
-
-// ✨ New: Clean up all components and event listeners
-window.meetergo.destroy();
-```
-
-### Modal Management
-
-```javascript
-// Open/close modal
-window.meetergo.openModal();
-window.meetergo.closeModal();
-
-// Open with specific content
-window.meetergo.openModalWithContent({
-  link: "https://cal.meetergo.com/your-link",
-  existingParams: { firstname: "John" },
-});
-```
-
-### DOM Management
-
-```javascript
-// Refresh components after DOM changes
-window.meetergo.parseIframes();
-window.meetergo.parseButtons();
-
-// Bind/unbind elements
-window.meetergo.bindElementToScheduler(element, link, options);
-window.meetergo.unbindElementFromScheduler(element);
-```
-
-## 🎯 Callbacks & Events
-
-### Enhanced Success Callback
-
-```javascript
-window.meetergoSettings = {
-  // ✨ Supports both legacy and new formats
-  onSuccess: function (dataOrId) {
-    if (typeof dataOrId === "string") {
-      // Legacy format: appointment ID string
-      console.log("Appointment ID:", dataOrId);
-      window.location.href = `/thank-you?id=${dataOrId}`;
-    } else {
-      // New format: BookingSuccessfulData object
-      console.log("Booking data:", dataOrId);
-      if (dataOrId.appointmentId) {
-        window.location.href = `/thank-you?id=${dataOrId.appointmentId}`;
-      }
-    }
-  },
-
-  // ✨ New: General event handler
-  onEvent: function (event) {
-    switch (event.type) {
-      case "booking_completed":
-        console.log("Booking completed!");
-        break;
-      case "modal_opened":
-        console.log("Modal opened");
-        break;
-      case "video_expand":
-        console.log("Video expanded");
-        break;
-    }
-  },
-};
-```
-
-### TypeScript Types
-
-```typescript
-type BookingSuccessfulData = {
-  appointmentId?: string;
-  secret?: string;
-  attendeeEmail?: string;
-  bookingType?: "doubleOptIn" | "requireHostConfirmation";
-  provisionalBookingId?: string;
-};
-
-interface meetergoSettings {
-  company: string;
-  enableAutoResize?: boolean;
-  iframeAlignment?: "left" | "center" | "right";
-  floatingButton?: FloatingButtonConfig;
-  sidebar?: SidebarConfig;
-  videoEmbed?: VideoEmbedConfig;
-  prefill?: meetergoPrefill;
-  formListeners?: FormListener[];
-  onSuccess?: (dataOrId: BookingSuccessfulData | string) => void;
-  onEvent?: (event: meetergoEvent) => void;
-}
-```
-
-## 🏗️ Architecture & Performance
-
-### Modular Design
-
-- **Modal Manager**: Handles popup windows and overlays
-- **Sidebar Manager**: Manages collapsible sidebar functionality
-- **Video Embed Manager**: Controls video playback and interactions
-- **DOM Cache**: Optimizes element queries for better performance
-- **Error Handler**: Provides user-friendly error notifications
-
-### Memory Management
-
-- ✅ **Automatic Cleanup**: Event listeners and timeouts are properly cleaned up
-- ✅ **Memory Leak Prevention**: Proper component lifecycle management
-- ✅ **Performance Monitoring**: Built-in performance tracking
-
-### Browser Support
-
-- ✅ **Modern Browsers**: Chrome, Firefox, Safari, Edge
-- ✅ **Mobile Friendly**: Responsive design for all devices
-- ✅ **HLS Support**: Adaptive video streaming
-- ✅ **Fallback Handling**: Graceful degradation for older browsers
-
-## 🌐 CDN & Deployment
-
-### Production CDN
-
-```html
-<!-- Latest stable version -->
-<script src="https://d3j7x8v9y2q4z8.cloudfront.net/browser-v3.js"></script>
-
-<!-- Previous version (fallback) -->
-<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v2.js"></script>
-```
-
-### Self-Hosting
-
-```bash
-npm install
-npm run build
-npm run esbuild-browser:ultra  # Ultra-minified production build
-```
-
-Use `dist/esbuild/browser-ultra.js` for production deployment.
-
-## 🔍 Testing & Development
-
-### Local Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start development build
-npm run esbuild-browser:dev
-
-# Watch for changes
-npm run esbuild-browser:watch
-
-# Run tests
-npm test
-
-# Lint code
-npm run lint
-```
-
-### Test Pages
-
-- `index.html` - Local development testing
-- `index-aws-test.html` - Production CDN testing
-
-## 🚨 Migration Guide
-
-### Upgrading from v2 to v3
-
-**No breaking changes!** v3 is fully backward compatible.
-
-**New features to adopt:**
-
-```javascript
-// Enable auto-resize for better UX
-window.meetergoSettings.enableAutoResize = true;
-
-// Enhanced video embed controls
-videoEmbed: {
-  // ... existing config
-  // Progress bar now works automatically
-  // Mute button is now functional
-}
-
-// New callback format (optional)
-onSuccess: function(data) {
-  // Handle both old and new formats automatically
-  console.log('Booking result:', data);
-}
-```
-
-### Embed Code Updates
-
-**Old iframe embeds** work unchanged, but for better UX:
-
-```html
-<!-- Before (still works) -->
-<iframe
-  src="https://cal.meetergo.com/your-link"
-  style="width:100%;height:600px;"
-></iframe>
-
-<!-- After (recommended) -->
+<!-- v3 (still works) -->
 <div class="meetergo-iframe" link="https://cal.meetergo.com/your-link"></div>
+
+<!-- v4 (recommended) -->
+<div class="meetergo-iframe" data-src="https://cal.meetergo.com/your-link"></div>
 ```
 
-## 📞 Support
+---
 
-- **Documentation**: [docs.meetergo.com](https://docs.meetergo.com)
-- **GitHub Issues**: [Report bugs or request features](https://github.com/meetergo/meetergo-integration/issues)
+## Development
+
+```bash
+npm install
+
+# Dev build (with inline sourcemaps)
+npm run esbuild-v4-browser:dev
+
+# Production build
+npm run esbuild-v4-browser
+
+# Open test page
+open test-v4.html
+```
+
+The test page (`test-v4.html`) covers all embed types: inline, modal, sidebar, floating button, video widget, namespace isolation, and event logging.
+
+---
+
+## CDN
+
+```html
+<!-- v4 (current) -->
+<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js"></script>
+
+<!-- v3 (legacy) -->
+<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v3.js"></script>
+```
+
+---
+
+## Support
+
+- **Issues**: [github.com/meetergo/meetergo-integration/issues](https://github.com/meetergo/meetergo-integration/issues)
 - **Email**: integration@meetergo.com
 
 ---

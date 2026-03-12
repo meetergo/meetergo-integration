@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meetergo v4 — Test Page</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    h2 { margin-top: 40px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+    .demo-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+    .note { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 12px 16px; font-size: 14px; color: #0369a1; }
+    .inline-container { border: 2px dashed #d1d5db; border-radius: 8px; min-height: 200px; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  </style>
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════
+    MEETERGO v4 LOADER SNIPPET
+    Paste this into <head>. Replace the src with your CDN URL.
+    ═══════════════════════════════════════════════════════════════════
+  -->
+  <script>
+    (function(w,d,s,u){
+      w.meetergo = w.meetergo || function(){ (w.meetergo.q = w.meetergo.q || []).push(arguments); };
+      w.meetergo.version = '4';
+      var e = d.createElement(s); e.async = 1;
+      e.src = u;
+      d.head.appendChild(e);
+    })(window, document, 'script', './dist/v4/browser.js');
+
+    // ── Init call (queued before SDK loads) ──────────────────────────
+    meetergo('init', {
+      // Floating button — visible on page load:
+      floatingButton: {
+        link: 'http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv',
+        text: 'Book a Meeting',
+        position: 'bottom-right',
+        animation: 'pulse'
+      },
+
+      // Sidebar — pre-create on init:
+      sidebar: {
+        link: 'http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv',
+        position: 'right',
+        buttonText: 'Schedule',
+        buttonPosition: 'middle-right',
+        width: '420px'
+      },
+
+      // Theme customisation example:
+      ui: {
+        cssVars: { '--mg-brand': '#7c3aed', '--mg-brand-hover': '#6d28d9' }
+      },
+
+      // Event listeners
+      onBookingSuccessful: function(data) {
+        console.log('[v4] Booking successful!', data);
+        document.getElementById('event-log').innerHTML +=
+          '<li>✅ Booking successful: ' + JSON.stringify(data) + '</li>';
+      },
+      onEvent: function(envelope) {
+        console.log('[v4] Event:', envelope.event, envelope.data);
+        document.getElementById('event-log').innerHTML +=
+          '<li>📡 ' + envelope.event + '</li>';
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <h1>Meetergo Embed SDK v4 — Test Page</h1>
+  <div class="note" id="sdk-status" style="background:#fef2f2;border-color:#fca5a5;color:#b91c1c;">
+    ⏳ Waiting for SDK…
+  </div>
+  <script>
+    // Confirm SDK loaded and buttons are bound
+    var statusEl = document.getElementById('sdk-status');
+    var checkInterval = setInterval(function() {
+      if (window.meetergo && window.meetergo.version) {
+        clearInterval(checkInterval);
+        statusEl.style.background = '#f0fdf4';
+        statusEl.style.borderColor = '#86efac';
+        statusEl.style.color = '#166534';
+        statusEl.innerHTML =
+          '✅ SDK v' + window.meetergo.version + ' loaded. ' +
+          'Buttons with <code>data-meetergo-link</code> and <code>class="meetergo-modal-button"</code> are auto-bound. ' +
+          'Build cmd: <code>npm run esbuild-v4-browser:dev</code>';
+      }
+    }, 100);
+    setTimeout(function() {
+      clearInterval(checkInterval);
+      if (!window.meetergo || !window.meetergo.version) {
+        statusEl.innerHTML = '❌ SDK did NOT load. Check DevTools console and the script src path.';
+      }
+    }, 5000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 1: v3-style backwards compatibility
+    class="meetergo-modal-button" + link="..."
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>1. v3 Backwards Compatible Button</h2>
+  <p>Uses the old v3 approach: <code>class="meetergo-modal-button"</code> + <code>link="..."</code></p>
+  <div class="demo-row">
+    <button
+      class="meetergo-modal-button"
+      link="http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv"
+      style="background:#0A64BC;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Book (v3 style)
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 2: v4 data-attribute API — zero JS
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>2. v4 Data Attribute API (zero JS)</h2>
+  <p>Uses <code>data-meetergo-link</code> on any element — no JS required.</p>
+  <div class="demo-row">
+    <button
+      data-meetergo-link="http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv"
+      style="background:#7c3aed;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Book (v4 data attr)
+    </button>
+
+    <a
+      href="#"
+      data-meetergo-link="http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv"
+      data-meetergo-prefill-email="test@example.com"
+      style="background:#059669;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;display:inline-flex;align-items:center;">
+      Book with prefill (email)
+    </a>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 3: JavaScript API
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>3. JavaScript API</h2>
+  <div class="demo-row">
+    <button
+      onclick="meetergo('modal', { link: 'http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv' })"
+      style="background:#0f172a;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      meetergo('modal', { link })
+    </button>
+
+    <button
+      onclick="meetergo.ns['default'].openModal('http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv')"
+      style="background:#b45309;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      meetergo.ns['default'].openModal()
+    </button>
+
+    <button
+      onclick="meetergo('closeModal')"
+      style="background:#dc2626;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Close Modal
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 4: Inline embed
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>4. Inline Embed (meetergo-iframe class)</h2>
+  <p>Add class <code>meetergo-iframe</code> + <code>data-src</code> for auto inline embed.</p>
+  <div
+    class="meetergo-iframe inline-container"
+    data-src="http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv"
+    data-align="center"
+    style="min-height: 600px;">
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 5: Form — Inline embed
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>5. Form — Inline Embed</h2>
+  <p>Form embedded directly on the page via <code>meetergo-iframe</code> class.</p>
+  <div
+    class="meetergo-iframe inline-container"
+    data-src="http://localhost:4210/f/a432f091-776a-4235-8dc5-22275d670dcb?lang=de"
+    style="min-height: 500px;">
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 6: Form — Popup modal
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>6. Form — Popup Modal</h2>
+  <p>Opens the same form in a modal popup.</p>
+  <div class="demo-row">
+    <button
+      data-meetergo-link="http://localhost:4210/f/a432f091-776a-4235-8dc5-22275d670dcb?lang=de"
+      style="background:#0A64BC;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Open Form (data-attr)
+    </button>
+    <button
+      onclick="meetergo('modal', { link: 'http://localhost:4210/f/a432f091-776a-4235-8dc5-22275d670dcb?lang=de' })"
+      style="background:#0f172a;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Open Form (JS API)
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 7: Sidebar via data-attribute
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>7. Sidebar (data-attribute)</h2>
+  <p>Uses <code>data-meetergo-layout="sidebar"</code> — click button to toggle the sidebar.</p>
+  <div class="demo-row">
+    <button
+      data-meetergo-link="http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv"
+      data-meetergo-layout="sidebar"
+      style="background:#0891b2;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Toggle Sidebar (data-attr)
+    </button>
+    <button
+      onclick="meetergo.ns['default'].toggleSidebar()"
+      style="background:#0891b2;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Toggle Sidebar (JS API)
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 6: Floating button (initialized on page load via init config)
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>8. Floating Button</h2>
+  <p>The purple <strong>Book a Meeting</strong> button (bottom-right) was created via <code>floatingButton</code> in the <code>init</code> config above.</p>
+  <div class="demo-row">
+    <button
+      onclick="meetergo('init', { floatingButton: { link: 'http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv', text: 'Recreated!', position: 'bottom-left', backgroundColor: '#dc2626' } })"
+      style="background:#dc2626;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Re-init with bottom-left red button
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 7: Prerender / preload
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>9. Prerender</h2>
+  <p>Warms up a hidden iframe so the modal opens instantly. Check DevTools → Elements for <code>mg-prerender-parking-*</code>.</p>
+  <div class="demo-row">
+    <button
+      onclick="meetergo('prerender', { link: 'http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv' })"
+      style="background:#7c3aed;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Prerender iframe
+    </button>
+    <button
+      onclick="meetergo('modal', { link: 'http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv' })"
+      style="background:#059669;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Open Modal (uses prerender if ready)
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    TEST 8: Namespace isolation
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>8. Namespace Isolation</h2>
+  <p>Two independent namespaces — each has its own modal and event bus.</p>
+  <script>
+    meetergo('init', {
+      ns: 'sales',
+      ui: { cssVars: { '--mg-brand': '#dc2626' } },
+      onBookingSuccessful: function(data) {
+        console.log('[sales ns] Booking!', data);
+      }
+    });
+    meetergo('init', {
+      ns: 'support',
+      ui: { cssVars: { '--mg-brand': '#059669' } },
+      onBookingSuccessful: function(data) {
+        console.log('[support ns] Booking!', data);
+      }
+    });
+  </script>
+  <div class="demo-row">
+    <button
+      data-meetergo-link="http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv"
+      data-meetergo-ns="sales"
+      style="background:#dc2626;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Open Sales Modal (red)
+    </button>
+    <button
+      data-meetergo-link="http://localhost:4210/ismefzzviicjxyecgv/30-min-meeting-mit-ismefzzviicjxyecgv"
+      data-meetergo-ns="support"
+      style="background:#059669;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Open Support Modal (green)
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    Event log
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>Event Log</h2>
+  <ul id="event-log" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;min-height:60px;list-style:none;font-size:13px;font-family:monospace;"></ul>
+
+  <!-- Subscribe to events via JS after SDK loads -->
+  <script>
+    // Wait for SDK, then subscribe
+    var checkSDK = setInterval(function() {
+      if (typeof meetergo === 'function' && meetergo.ns) {
+        clearInterval(checkSDK);
+        meetergo('on', {
+          action: 'linkReady',
+          callback: function(envelope) {
+            document.getElementById('event-log').innerHTML +=
+              '<li>🔗 linkReady — ns: ' + envelope.namespace + '</li>';
+          }
+        });
+        meetergo('on', {
+          action: 'modalOpened',
+          callback: function(envelope) {
+            document.getElementById('event-log').innerHTML +=
+              '<li>📂 modalOpened — ' + (envelope.data && envelope.data.link ? envelope.data.link.slice(0, 50) + '…' : '') + '</li>';
+          }
+        });
+        meetergo('on', {
+          action: 'modalClosed',
+          callback: function() {
+            document.getElementById('event-log').innerHTML +=
+              '<li>❌ modalClosed</li>';
+          }
+        });
+      }
+    }, 100);
+  </script>
+
+</body>
+</html>
