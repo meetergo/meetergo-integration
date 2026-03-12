@@ -20,6 +20,20 @@ import type { EventBus } from "../core/event-bus.js";
 import type { InlineEmbedConfig, MeetergoPrefill, NamespaceConfig } from "../types/index.js";
 
 const MIN_HEIGHT_CHANGE_PX = 10;
+
+/** Walk up the DOM to find the nearest scrollable ancestor, or null if none (falls back to window). */
+function getScrollableAncestor(el: HTMLElement): HTMLElement | null {
+  let node = el.parentElement;
+  while (node && node !== document.body) {
+    const style = window.getComputedStyle(node);
+    const overflow = style.overflow + style.overflowY;
+    if (/auto|scroll/.test(overflow) && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
 const MEETERGO_ORIGINS = [
   "https://cal.meetergo.com",
   "https://meetergo.com",
@@ -132,7 +146,13 @@ export class InlineEmbedManager {
         (data?.event === "meetergo:scroll_by_distance" || data?.type === "meetergo:scroll-by-distance") &&
         typeof (data?.data as Record<string, unknown>)?.distance === "number"
       ) {
-        window.scrollBy({ top: (data.data as { distance: number }).distance, behavior: "smooth" });
+        const distance = (data.data as { distance: number }).distance;
+        const scrollable = getScrollableAncestor(container);
+        if (scrollable) {
+          scrollable.scrollTo({ top: scrollable.scrollTop + distance, behavior: "smooth" });
+        } else {
+          window.scrollBy({ top: distance, behavior: "smooth" });
+        }
         return;
       }
 
