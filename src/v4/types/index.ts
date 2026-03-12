@@ -158,6 +158,14 @@ export interface BookerViewedEvent
   event: "bookerViewed";
 }
 
+export interface BookerReopenedEvent extends MeetergoEventEnvelope<{ link: string }> {
+  event: "bookerReopened";
+}
+
+export interface BookerReloadedEvent extends MeetergoEventEnvelope<{ link: string }> {
+  event: "bookerReloaded";
+}
+
 export interface RoutedEvent
   extends MeetergoEventEnvelope<{
     actionType: "customPageMessage" | "externalRedirectUrl" | "eventTypeRedirectUrl";
@@ -182,6 +190,8 @@ export type MeetergoEvent =
   | VideoExpandedEvent
   | VideoMinimizedEvent
   | BookerViewedEvent
+  | BookerReopenedEvent
+  | BookerReloadedEvent
   | RoutedEvent;
 
 export type MeetergoEventName = MeetergoEvent["event"];
@@ -304,8 +314,14 @@ export interface NamespaceConfig {
   /** Color scheme (synced to all iframes) */
   colorScheme?: ColorScheme;
 
-  /** Enable debug logging */
+  /** Enable debug logging to console */
   debug?: boolean;
+
+  /** Draw a green outline around all iframes for visual debugging */
+  uiDebug?: boolean;
+
+  /** Custom attributes to apply to every iframe created in this namespace */
+  iframeAttrs?: Record<string, string>;
 
   // ── Callbacks (convenience aliases for on()) ──────────────────────────────
 

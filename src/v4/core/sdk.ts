@@ -28,7 +28,7 @@ const DEFAULT_NS = "default";
 
 export class MeetergoSDK {
   private namespaces: Map<string, MeetergoNamespace> = new Map();
-  private scanner: DataAttrScanner;
+  scanner: DataAttrScanner;
 
   constructor() {
     this.scanner = new DataAttrScanner({

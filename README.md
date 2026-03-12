@@ -152,6 +152,18 @@ Or via data attributes on modal triggers:
 </button>
 ```
 
+### Per-element JSON Config
+
+Pass any extra URL params (theme, layout, etc.) as a JSON attribute:
+
+```html
+<button
+  data-meetergo-link="https://cal.meetergo.com/your-booking-link"
+  data-meetergo-config='{"theme":"dark","layout":"month_view"}'>
+  Book Now
+</button>
+```
+
 ### Form Listeners
 
 Auto-open modal when a form is submitted:
@@ -186,18 +198,21 @@ Available events:
 
 | Event | Fired when |
 |---|---|
-| `linkReady` | SDK has bound all elements |
+| `linkReady` | Iframe loaded successfully |
+| `linkFailed` | Iframe failed to load (timeout or error) |
 | `bookingSuccessful` | A booking was completed |
 | `bookingCancelled` | A booking was cancelled |
 | `bookingRescheduled` | A booking was rescheduled |
 | `modalOpened` | Modal opened |
 | `modalClosed` | Modal closed |
+| `bookerViewed` | Booking page scrolled into view (inline) |
+| `bookerReopened` | Same-link modal shown again without reload |
+| `bookerReloaded` | Modal opened with a different link |
 | `sidebarOpened` | Sidebar opened |
 | `sidebarClosed` | Sidebar closed |
 | `videoPlay` | Video started playing |
 | `videoPause` | Video paused |
 | `videoExpanded` | Video widget expanded |
-| `bookerViewed` | Booking page was viewed inside iframe |
 
 Convenience callbacks in `init` config:
 
@@ -226,6 +241,31 @@ Target a specific namespace from a button:
   Talk to Sales
 </button>
 ```
+
+---
+
+## Debugging
+
+```js
+meetergo('init', {
+  debug: true,    // log all SDK calls to console
+  uiDebug: true,  // draw a green outline around every iframe
+});
+```
+
+Custom attributes on every iframe (e.g. for CSP or analytics):
+
+```js
+meetergo('init', {
+  iframeAttrs: { 'data-analytics': 'booking', sandbox: 'allow-scripts allow-same-origin' }
+});
+```
+
+---
+
+## Multiple Script Tags
+
+Loading the SDK script more than once is safe — subsequent loads skip re-initialization and just re-scan the DOM for any new embed elements added after the first load.
 
 ---
 
