@@ -27,6 +27,8 @@ export class ModalManager {
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private currentLink: string | null = null;
   private currentColorSchemeHandle: { stop(): void } | null = null;
+  private loadTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private openCount = 0;
 
   constructor(ns: string, bus: EventBus, config: NamespaceConfig, prerender: PrerenderManager | null) {
     this.ns = ns;
@@ -47,6 +49,24 @@ export class ModalManager {
     if (this.config.disableModal) return;
 
     this.initialize();
+
+    // Smart reuse: same link already loaded → just show, fire bookerReopened
+    if (this.currentLink === link && !this.isOpen()) {
+      const modalContent = domCache.getElementById(this.contentId());
+      const existingIframe = modalContent?.querySelector("iframe");
+      if (existingIframe) {
+        this.openCount++;
+        this.openModal();
+        this.bus.emit("bookerReopened", { link });
+        return;
+      }
+    }
+
+    // Different link while modal has an iframe → fire bookerReloaded
+    if (this.currentLink && this.currentLink !== link) {
+      this.bus.emit("bookerReloaded", { link });
+    }
+
     this.currentLink = link;
     this.bus.emit("modalOpened", { link });
     errorHandler.announce("Loading booking calendar…");
@@ -57,7 +77,7 @@ export class ModalManager {
     if (!modalContent) return;
 
     modalContent.innerHTML = "";
-    this.showSpinner();
+    this.showSkeleton();
 
     // Try to acquire a prerendered iframe first
     let iframe: HTMLIFrameElement | null = null;
@@ -94,10 +114,25 @@ export class ModalManager {
       border: "none",
     });
 
+    // linkFailed timeout — fire if iframe doesn't load within 15s
+    this.clearLoadTimeout();
+    this.loadTimeoutId = setTimeout(() => {
+      this.hideSkeleton();
+      this.bus.emit("linkFailed", { code: 0, msg: "Booking calendar failed to load", url: link });
+    }, 15000);
+
     iframe.addEventListener("load", () => {
-      this.hideSpinner();
+      this.clearLoadTimeout();
+      this.hideSkeleton();
       errorHandler.announce("Booking calendar loaded.");
       this.bus.emit("linkReady", {});
+      this.openCount++;
+    }, { once: true });
+
+    iframe.addEventListener("error", () => {
+      this.clearLoadTimeout();
+      this.hideSkeleton();
+      this.bus.emit("linkFailed", { code: 0, msg: "Booking calendar failed to load", url: link });
     }, { once: true });
 
     modalContent.appendChild(iframe);
@@ -124,10 +159,11 @@ export class ModalManager {
     const modal = domCache.getElementById(this.modalId());
     if (!modal) return;
 
+    this.clearLoadTimeout();
     modal.style.visibility = "hidden";
     modal.style.opacity = "0";
     document.body.style.overflow = "";
-    this.hideSpinner();
+    this.hideSkeleton();
 
     // Return prerendered iframe to parking
     if (this.prerender && this.currentLink) {
@@ -182,14 +218,24 @@ export class ModalManager {
   private contentId() { return `mg-${this.ns}-modal-content`; }
   private spinnerId() { return `mg-${this.ns}-modal-spinner`; }
 
-  private showSpinner(): void {
+  private showSkeleton(): void {
     const spinner = domCache.getElementById(this.spinnerId());
-    if (spinner) { spinner.style.visibility = "visible"; spinner.style.opacity = "1"; }
+    if (spinner) { spinner.style.display = "inline-block"; spinner.style.visibility = "visible"; spinner.style.opacity = "1"; }
   }
 
-  private hideSpinner(): void {
+  private hideSkeleton(): void {
     const spinner = domCache.getElementById(this.spinnerId());
     if (spinner) { spinner.style.display = "none"; }
+  }
+
+  private showSpinner(): void { this.showSkeleton(); }
+  private hideSpinner(): void { this.hideSkeleton(); }
+
+  private clearLoadTimeout(): void {
+    if (this.loadTimeoutId !== null) {
+      clearTimeout(this.loadTimeoutId);
+      this.loadTimeoutId = null;
+    }
   }
 
   private createModalElements(): void {

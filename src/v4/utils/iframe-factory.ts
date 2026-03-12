@@ -32,6 +32,10 @@ export interface IframeFactoryOptions {
   height?: string;
   /** Prevent color-scheme sync (e.g. for sidebar iframes already full-visible) */
   skipColorSchemeSync?: boolean;
+  /** Draw a green outline for visual debugging */
+  uiDebug?: boolean;
+  /** Extra attributes to set on the iframe element */
+  iframeAttrs?: Record<string, string>;
 }
 
 export interface IframeFactoryResult {
@@ -54,6 +58,8 @@ export function createIframe(options: IframeFactoryOptions): IframeFactoryResult
     width = "100%",
     height = "700px",
     skipColorSchemeSync = false,
+    uiDebug = false,
+    iframeAttrs,
   } = options;
 
   const params = collectIframeParams({ prefill, extraParams, forwardQueryParams });
@@ -74,6 +80,16 @@ export function createIframe(options: IframeFactoryOptions): IframeFactoryResult
     display: "block",
     overflow: "hidden",
   });
+
+  if (uiDebug) {
+    iframe.style.outline = "2px solid #22c55e";
+  }
+
+  if (iframeAttrs) {
+    for (const [key, value] of Object.entries(iframeAttrs)) {
+      iframe.setAttribute(key, value);
+    }
+  }
 
   let colorSchemeHandle: ColorSchemeSyncHandle | null = null;
   if (!skipColorSchemeSync) {

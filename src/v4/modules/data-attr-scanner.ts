@@ -12,6 +12,7 @@
  *   data-meetergo-ns          — namespace to route to (default: "default")
  *   data-meetergo-layout      — "modal" (default) | "sidebar" | "inline"
  *   data-meetergo-prefill-*   — prefill fields (e.g. data-meetergo-prefill-email)
+ *   data-meetergo-config      — JSON config object, e.g. '{"theme":"dark","layout":"month_view"}'
  *
  * Uses MutationObserver for SPA compatibility.
  */
@@ -84,6 +85,19 @@ export class DataAttrScanner {
     if (!link) return;
 
     const prefill = this.extractPrefill(el);
+
+    // data-meetergo-config='{"theme":"dark","layout":"month_view"}' — merge into prefill as URL params
+    const configAttr = el.getAttribute("data-meetergo-config");
+    if (configAttr) {
+      try {
+        const parsed = JSON.parse(configAttr) as Record<string, string>;
+        for (const [k, v] of Object.entries(parsed)) {
+          if (typeof v === "string" && !(k in prefill)) prefill[k] = v;
+        }
+      } catch {
+        // invalid JSON — ignore
+      }
+    }
 
     if (layout === "inline") {
       // Embed immediately in the element

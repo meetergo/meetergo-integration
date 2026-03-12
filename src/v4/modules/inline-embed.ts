@@ -127,6 +127,21 @@ export class InlineEmbedManager {
         newHeight = data.scrollHeight as number;
       }
 
+      // scrollByDistance — booking page asks parent to scroll by N pixels
+      if (
+        (data?.event === "meetergo:scroll_by_distance" || data?.type === "meetergo:scroll-by-distance") &&
+        typeof (data?.data as Record<string, unknown>)?.distance === "number"
+      ) {
+        window.scrollBy({ top: (data.data as { distance: number }).distance, behavior: "smooth" });
+        return;
+      }
+
+      // linkFailed postMessage from booking page
+      if (data?.event === "meetergo:link_failed" || data?.type === "meetergo:linkFailed") {
+        this.bus.emit("linkFailed", { code: 0, msg: "Booking page reported failure", url: iframe.src });
+        return;
+      }
+
       if (newHeight === null || Math.abs(newHeight - lastHeight) < MIN_HEIGHT_CHANGE_PX) return;
       lastHeight = newHeight;
 

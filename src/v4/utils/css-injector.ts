@@ -148,21 +148,18 @@ export const MeetergoCSSv4 = {
       position: absolute;
       top: 50%;
       left: 50%;
-      margin-left: -24px;
-      margin-top: -24px;
-      width: 48px;
-      height: 48px;
-      border: 6px solid #FFF;
-      border-bottom-color: #d1d5db;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      display: inline-block;
-      box-sizing: border-box;
-      animation: mg-spin 1s linear infinite;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      animation: mg-spin 0.7s linear infinite;
       z-index: 1002;
+      box-sizing: border-box;
     }
     @keyframes mg-spin {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
     .mg-inline {
