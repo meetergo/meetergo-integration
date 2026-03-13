@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meetergo v4 — Edge Case Tests (Prod CDN)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+    h2 { margin-top: 48px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; margin-left: 8px; vertical-align: middle; }
+    .badge-pass { background: #dcfce7; color: #166534; }
+    .badge-fail { background: #fee2e2; color: #991b1b; }
+    .badge-pending { background: #fef9c3; color: #854d0e; }
+    .note { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #0369a1; margin-bottom: 12px; }
+    .inline-container { border: 2px dashed #d1d5db; border-radius: 8px; min-height: 600px; }
+    .demo-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    #sdk-status { padding: 10px 14px; border-radius: 6px; font-size: 13px; border: 1px solid #fca5a5; background: #fef2f2; color: #b91c1c; }
+    #event-log { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; min-height: 60px; list-style: none; font-size: 12px; font-family: monospace; }
+  </style>
+
+  <!--
+    EDGE CASE 1 — Queue stub + floatingButton init in <head>
+    This simulates a website that adds the floating button snippet separately from the embed.
+    The init call must be queued before the SDK loads.
+  -->
+  <script>
+    window.meetergo = window.meetergo || function(){ (window.meetergo.q = window.meetergo.q || []).push(arguments); };
+    meetergo('init', {
+      floatingButton: {
+        position: 'bottom-right',
+        text: 'Termin buchen',
+        link: 'https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy',
+        backgroundColor: '#196EF5',
+        textColor: '#FFFFFF',
+        animation: 'none'
+      },
+      onBookingSuccessful: function(data) {
+        document.getElementById('event-log').innerHTML +=
+          '<li>✅ bookingSuccessful: ' + JSON.stringify(data) + '</li>';
+      }
+    });
+  </script>
+
+  <!-- SDK loaded once, deferred -->
+  <script defer src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js"></script>
+</head>
+<body>
+
+  <h1>Meetergo v4 — Edge Case Tests</h1>
+  <p style="color:#6b7280;font-size:14px;">CDN: <code>liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js</code></p>
+
+  <div id="sdk-status">⏳ Waiting for SDK…</div>
+  <script>
+    var statusEl = document.getElementById('sdk-status');
+    var t0 = Date.now();
+    var check = setInterval(function() {
+      if (window.meetergo && window.meetergo.version) {
+        clearInterval(check);
+        statusEl.style.cssText = 'padding:10px 14px;border-radius:6px;font-size:13px;border:1px solid #86efac;background:#f0fdf4;color:#166534;';
+        statusEl.innerHTML = '✅ SDK v' + window.meetergo.version + ' loaded in ' + (Date.now() - t0) + 'ms';
+      }
+    }, 50);
+    setTimeout(function() {
+      clearInterval(check);
+      if (!window.meetergo || !window.meetergo.version) {
+        statusEl.innerHTML = '❌ SDK did not load — check DevTools console';
+      }
+    }, 6000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 1: Inline embed (.meetergo-iframe) + floating button
+    Both snippets are on the page. The floating button is init'd via queue
+    in <head>. The inline embed is just a div + script — no init call.
+    Expected: embed renders AND floating button is visible.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>1. Inline embed + floating button coexist
+    <span class="badge badge-pending" id="badge-1">pending</span>
+  </h2>
+  <div class="note">
+    <strong>Edge case:</strong> <code>.meetergo-iframe</code> div with no <code>meetergo('init')</code> in the embed snippet,
+    but a separate <code>meetergo('init', &#123; floatingButton &#125;)</code> already queued in <code>&lt;head&gt;</code>.<br>
+    <strong>Expected:</strong> blue embed iframe renders below + blue floating button visible bottom-right.
+  </div>
+  <div
+    class="meetergo-iframe inline-container"
+    data-src="https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy"
+    style="min-height:600px;">
+  </div>
+  <script>
+    // Auto-check after 3s
+    setTimeout(function() {
+      var el = document.querySelector('.meetergo-iframe');
+      var hasIframe = el && !!el.querySelector('iframe');
+      var hasBtn = !!document.querySelector('.mg-float-button');
+      var badge = document.getElementById('badge-1');
+      if (hasIframe) {
+        badge.textContent = hasBtn ? 'PASS' : 'embed ✓ button ✗';
+        badge.className = 'badge ' + (hasBtn ? 'badge-pass' : 'badge-fail');
+      } else {
+        badge.textContent = 'FAIL — no iframe';
+        badge.className = 'badge badge-fail';
+      }
+    }, 3000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 2: Multiple .meetergo-iframe embeds on same page
+    Expected: all render independently without interfering.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>2. Multiple inline embeds on same page
+    <span class="badge badge-pending" id="badge-2">pending</span>
+  </h2>
+  <div class="note">
+    Two <code>.meetergo-iframe</code> divs with different URLs. Both should render.
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div
+      class="meetergo-iframe inline-container"
+      data-src="https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy"
+      style="min-height:400px;">
+    </div>
+    <div
+      class="meetergo-iframe inline-container"
+      data-src="https://cal.meetergo.com/dominik/test-co-host"
+      style="min-height:400px;">
+    </div>
+  </div>
+  <script>
+    setTimeout(function() {
+      var els = document.querySelectorAll('.meetergo-iframe');
+      // els[0] is the one from test 1, els[1] and els[2] are from test 2
+      var count = 0;
+      els.forEach(function(el) { if (el.querySelector('iframe')) count++; });
+      var badge = document.getElementById('badge-2');
+      badge.textContent = count >= 3 ? 'PASS' : count + '/3 iframes rendered';
+      badge.className = 'badge ' + (count >= 3 ? 'badge-pass' : 'badge-fail');
+    }, 3000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 3: data-meetergo-link inline (new v4 API)
+    No init needed. Expected: iframe renders in the div.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>3. <code>data-meetergo-layout="inline"</code> (v4 zero-JS)
+    <span class="badge badge-pending" id="badge-3">pending</span>
+  </h2>
+  <div class="note">
+    Uses <code>data-meetergo-link</code> + <code>data-meetergo-layout="inline"</code>. No init call needed.
+  </div>
+  <div
+    data-meetergo-link="https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy"
+    data-meetergo-layout="inline"
+    class="inline-container"
+    style="min-height:400px;">
+  </div>
+  <script>
+    setTimeout(function() {
+      var el = document.querySelector('[data-meetergo-layout="inline"]');
+      var ok = el && !!el.querySelector('iframe');
+      var badge = document.getElementById('badge-3');
+      badge.textContent = ok ? 'PASS' : 'FAIL — no iframe';
+      badge.className = 'badge ' + (ok ? 'badge-pass' : 'badge-fail');
+    }, 3000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 4: Modal button — no init needed
+    Expected: click opens modal overlay.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>4. Modal button (v4 data-attr)
+    <span class="badge badge-pending" id="badge-4">pending</span>
+  </h2>
+  <div class="note">Uses <code>data-meetergo-link</code> with default modal layout. Click to test.</div>
+  <div class="demo-row">
+    <button
+      data-meetergo-link="https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy"
+      style="background:#196EF5;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Book (modal)
+    </button>
+    <button
+      onclick="meetergo('closeModal')"
+      style="background:#dc2626;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Close modal
+    </button>
+  </div>
+  <script>
+    setTimeout(function() {
+      var el = document.querySelector('[data-meetergo-link]:not([data-meetergo-layout])');
+      var ok = el && el.hasAttribute('data-mg-bound');
+      var badge = document.getElementById('badge-4');
+      badge.textContent = ok ? 'bound ✓' : 'FAIL — not bound';
+      badge.className = 'badge ' + (ok ? 'badge-pass' : 'badge-fail');
+    }, 3000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 5: SDK loaded twice (simulate double script tag)
+    The second load should call scanner.scan() only, not reinitialize.
+    Expected: no duplicate floating buttons or iframes.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>5. Double script tag (multi-load guard)
+    <span class="badge badge-pending" id="badge-5">pending</span>
+  </h2>
+  <div class="note">
+    Loads the SDK script a second time. Should trigger <code>scanner.scan()</code> only.<br>
+    <strong>Expected:</strong> exactly 1 floating button (not 0, not 2+) and inline embed from test 1 still rendered.
+  </div>
+  <div class="demo-row">
+    <button
+      onclick="loadSdkAgain()"
+      style="background:#7c3aed;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Load SDK again
+    </button>
+    <span id="double-load-result" style="font-size:13px;align-self:center;color:#6b7280;">click to test</span>
+  </div>
+  <script>
+    function loadSdkAgain() {
+      var s = document.createElement('script');
+      s.src = 'https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js';
+      s.onload = function() {
+        setTimeout(function() {
+          var btns = document.querySelectorAll('.mg-float-button');
+          var firstEmbed = document.querySelector('.meetergo-iframe');
+          var embedHasIframe = firstEmbed && !!firstEmbed.querySelector('iframe');
+          var result = document.getElementById('double-load-result');
+          var badge = document.getElementById('badge-5');
+          if (btns.length === 1 && embedHasIframe) {
+            result.textContent = '✅ 1 button + embed still intact';
+            badge.textContent = 'PASS'; badge.className = 'badge badge-pass';
+          } else if (btns.length === 0) {
+            result.textContent = '❌ Floating button was removed after 2nd load!';
+            badge.textContent = 'FAIL'; badge.className = 'badge badge-fail';
+          } else if (btns.length > 1) {
+            result.textContent = '❌ ' + btns.length + ' duplicate floating buttons!';
+            badge.textContent = 'FAIL'; badge.className = 'badge badge-fail';
+          } else {
+            result.textContent = '❌ Embed lost after 2nd load (button count: ' + btns.length + ')';
+            badge.textContent = 'FAIL'; badge.className = 'badge badge-fail';
+          }
+        }, 500);
+      };
+      document.head.appendChild(s);
+    }
+    // Auto-run after 4s
+    setTimeout(loadSdkAgain, 4000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 6: Dynamic embed div added after SDK loads
+    MutationObserver should pick it up and embed automatically.
+    Expected: iframe renders in the new div without any extra JS.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>6. Dynamic embed added after SDK loads (MutationObserver)
+    <span class="badge badge-pending" id="badge-6">pending</span>
+  </h2>
+  <div class="note">
+    Simulates a tab, accordion, or SPA route that adds a <code>.meetergo-iframe</code> div to the DOM after
+    the SDK has already initialized. The MutationObserver should detect it and embed automatically.
+  </div>
+  <div class="demo-row">
+    <button
+      onclick="addDynamicEmbed()"
+      style="background:#0891b2;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Add embed div dynamically
+    </button>
+  </div>
+  <div id="dynamic-embed-target"></div>
+  <script>
+    function addDynamicEmbed() {
+      var target = document.getElementById('dynamic-embed-target');
+      if (target.querySelector('.meetergo-iframe')) {
+        target.innerHTML = '';
+        document.getElementById('badge-6').textContent = 'pending';
+        document.getElementById('badge-6').className = 'badge badge-pending';
+      }
+      var div = document.createElement('div');
+      div.className = 'meetergo-iframe inline-container';
+      div.setAttribute('data-src', 'https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy');
+      div.style.minHeight = '400px';
+      target.appendChild(div);
+      setTimeout(function() {
+        var ok = !!div.querySelector('iframe');
+        var badge = document.getElementById('badge-6');
+        badge.textContent = ok ? 'PASS' : 'FAIL — no iframe (MutationObserver did not fire)';
+        badge.className = 'badge ' + (ok ? 'badge-pass' : 'badge-fail');
+      }, 2000);
+    }
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 7: SPA re-render — embed div removed then re-added
+    MutationObserver should re-embed when the div comes back.
+    Expected: iframe renders again after re-insertion.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>7. SPA re-render — embed removed &amp; re-added
+    <span class="badge badge-pending" id="badge-7">pending</span>
+  </h2>
+  <div class="note">
+    Simulates a framework like React/Vue that unmounts and remounts components on route change.
+    The SDK should re-embed the iframe when the div returns to the DOM.
+  </div>
+  <div class="demo-row">
+    <button
+      onclick="spaRemount()"
+      style="background:#b45309;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Simulate route change (remove + re-add)
+    </button>
+    <span id="spa-status" style="font-size:13px;align-self:center;color:#6b7280;"></span>
+  </div>
+  <div id="spa-mount-point">
+    <div
+      class="meetergo-iframe inline-container"
+      data-src="https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy"
+      style="min-height:400px;">
+    </div>
+  </div>
+  <script>
+    function spaRemount() {
+      var mount = document.getElementById('spa-mount-point');
+      var status = document.getElementById('spa-status');
+      var badge = document.getElementById('badge-7');
+      // Capture original HTML (without the bound attr so it re-embeds)
+      status.textContent = '⏳ Removing…';
+      mount.innerHTML = '';
+      setTimeout(function() {
+        status.textContent = '⏳ Re-adding…';
+        var div = document.createElement('div');
+        div.className = 'meetergo-iframe inline-container';
+        div.setAttribute('data-src', 'https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy');
+        div.style.minHeight = '400px';
+        mount.appendChild(div);
+        setTimeout(function() {
+          var ok = !!div.querySelector('iframe');
+          status.textContent = ok ? '✅ Re-embedded' : '❌ Not re-embedded';
+          badge.textContent = ok ? 'PASS' : 'FAIL — MutationObserver did not re-embed';
+          badge.className = 'badge ' + (ok ? 'badge-pass' : 'badge-fail');
+        }, 2000);
+      }, 500);
+    }
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 8: Double init call for same namespace
+    Second meetergo('init', { floatingButton }) should update config,
+    not create a duplicate. Expected: still exactly 1 floating button.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>8. Double <code>init</code> call (same namespace)
+    <span class="badge badge-pending" id="badge-8">pending</span>
+  </h2>
+  <div class="note">
+    Calls <code>meetergo('init', &#123; floatingButton &#125;)</code> a second time with a different button text.
+    Expected: button text updates, still exactly 1 floating button, no crash.
+  </div>
+  <div class="demo-row">
+    <button
+      onclick="reinitFloatingButton()"
+      style="background:#be185d;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+      Call init again (change button text)
+    </button>
+    <span id="reinit-status" style="font-size:13px;align-self:center;color:#6b7280;"></span>
+  </div>
+  <script>
+    function reinitFloatingButton() {
+      var status = document.getElementById('reinit-status');
+      var badge = document.getElementById('badge-8');
+      meetergo('init', {
+        floatingButton: {
+          position: 'bottom-right',
+          text: 'Updated!',
+          link: 'https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy',
+          backgroundColor: '#16a34a',
+          textColor: '#FFFFFF',
+          animation: 'none'
+        }
+      });
+      setTimeout(function() {
+        var btns = document.querySelectorAll('.mg-float-button');
+        if (btns.length === 1) {
+          status.textContent = '✅ 1 button, text: "' + (btns[0].textContent || '').trim() + '"';
+          badge.textContent = 'PASS'; badge.className = 'badge badge-pass';
+        } else {
+          status.textContent = '❌ ' + btns.length + ' buttons found';
+          badge.textContent = 'FAIL'; badge.className = 'badge badge-fail';
+        }
+      }, 500);
+    }
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EDGE CASE 9: .meetergo-iframe with empty / missing data-src
+    Should silently skip — no crash, no empty iframe.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>9. Empty <code>data-src</code> — defensive skip
+    <span class="badge badge-pending" id="badge-9">pending</span>
+  </h2>
+  <div class="note">
+    A <code>.meetergo-iframe</code> div with no <code>data-src</code> attribute.
+    Expected: silently ignored — no error, no empty iframe inserted.
+  </div>
+  <div
+    class="meetergo-iframe"
+    style="border:2px dashed #d1d5db;border-radius:8px;min-height:60px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;">
+    (no data-src — should stay empty)
+  </div>
+  <script>
+    setTimeout(function() {
+      // Find the div without data-src — it's the last .meetergo-iframe without a data-src attr
+      var empties = Array.prototype.filter.call(
+        document.querySelectorAll('.meetergo-iframe'),
+        function(el) { return !el.getAttribute('data-src'); }
+      );
+      var badge = document.getElementById('badge-9');
+      // PASS: no iframe inside, no JS error thrown
+      var hasUnwantedIframe = empties.some(function(el) { return !!el.querySelector('iframe'); });
+      if (!hasUnwantedIframe) {
+        badge.textContent = 'PASS'; badge.className = 'badge badge-pass';
+      } else {
+        badge.textContent = 'FAIL — iframe injected into empty-src div';
+        badge.className = 'badge badge-fail';
+      }
+    }, 3000);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    Event Log
+  ═══════════════════════════════════════════════════════════════════ -->
+  <h2>Event Log</h2>
+  <ul id="event-log"></ul>
+  <script>
+    var checkSDK = setInterval(function() {
+      if (typeof meetergo === 'function' && meetergo.ns) {
+        clearInterval(checkSDK);
+        meetergo('on', { action: 'modalOpened', callback: function(e) {
+          document.getElementById('event-log').innerHTML += '<li>📂 modalOpened</li>';
+        }});
+        meetergo('on', { action: 'modalClosed', callback: function() {
+          document.getElementById('event-log').innerHTML += '<li>❌ modalClosed</li>';
+        }});
+        meetergo('on', { action: 'bookingSuccessful', callback: function(e) {
+          document.getElementById('event-log').innerHTML += '<li>✅ bookingSuccessful</li>';
+        }});
+      }
+    }, 100);
+  </script>
+
+</body>
+</html>
