@@ -17,10 +17,12 @@
  * Uses MutationObserver for SPA compatibility.
  */
 
-const BOUND_ATTR   = "data-mg-bound";
-const LINK_ATTR    = "data-meetergo-link";
+const BOUND_ATTR      = "data-mg-bound";
+const LINK_ATTR       = "data-meetergo-link";
 /** v3 backwards-compat: class="meetergo-modal-button" link="https://..." */
-const V3_BTN_CLASS = "meetergo-modal-button";
+const V3_BTN_CLASS    = "meetergo-modal-button";
+/** v3 inline embed: class="meetergo-iframe" data-src="..." */
+const V3_IFRAME_CLASS = "meetergo-iframe";
 
 export interface DataAttrScannerCallbacks {
   openModal: (link: string, ns: string, prefill: Record<string, string>) => void;
@@ -71,6 +73,19 @@ export class DataAttrScanner {
       if (link) {
         el.setAttribute(LINK_ATTR, link);
         this.bind(el);
+      }
+    }
+
+    // v3 inline iframe: class="meetergo-iframe" data-src="..."
+    const iframeElements = document.querySelectorAll<HTMLElement>(
+      `.${V3_IFRAME_CLASS}:not([${BOUND_ATTR}])`
+    );
+    for (const el of iframeElements) {
+      const link = el.getAttribute("data-src") ?? el.getAttribute("data-link") ?? "";
+      if (link) {
+        const ns = el.getAttribute("data-meetergo-ns") ?? "default";
+        el.setAttribute(BOUND_ATTR, "true");
+        this.callbacks.embedInline(link, el, ns, {});
       }
     }
   }
