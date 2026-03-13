@@ -71,7 +71,8 @@ export class InlineEmbedManager {
     for (const container of containers) {
       const link = container.getAttribute("data-src") ?? container.getAttribute("data-link") ?? "";
       if (!link) continue;
-      this.embed({ link, elementOrSelector: container });
+      const align = container.getAttribute("data-align") as "left" | "center" | "right" | null;
+      this.embed({ link, elementOrSelector: container, ...(align && { alignment: align }) });
     }
   }
 
@@ -89,7 +90,8 @@ export class InlineEmbedManager {
 
     container.setAttribute("data-mg-bound", "true");
     container.classList.add("mg-inline");
-    if (config.alignment) container.setAttribute("data-align", config.alignment);
+    const alignment = config.alignment ?? this.config.iframeAlignment;
+    if (alignment) container.setAttribute("data-align", alignment);
 
     const extraParams: Record<string, string> = {};
     const prefill: MeetergoPrefill = { ...this.config.prefill, ...config.prefill };

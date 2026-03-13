@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meetergo v4 — Localhost Tests</title>
+
+  <!-- 1. Booking URL (meetergo-next on localhost:4210) -->
+  <script>
+    var BOOKING_URL = 'http://localhost:4210/ismefzzviicjxyecgv/real-estate-qualification'
+  </script>
+
+  <!-- 2. Queue stub + floating button init -->
+  <script>
+    window.meetergo = window.meetergo || function(){ (window.meetergo.q = window.meetergo.q || []).push(arguments); }
+    meetergo('init', {
+      floatingButton: {
+        position: 'bottom-right',
+        text: 'Termin buchen',
+        get link() { return BOOKING_URL },
+        backgroundColor: '#196EF5',
+        textColor: '#FFFFFF',
+        icon: 'CalendarPlus2',
+        animation: 'none',
+      },
+    })
+  </script>
+
+  <!-- 3. Local SDK build -->
+  <script defer src="dist/v4/browser-v4.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; padding: 24px; }
+    h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 0.85rem; margin-bottom: 24px; }
+
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+    .card .desc { font-size: 0.82rem; color: #555; margin-bottom: 14px; line-height: 1.5; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: 8px;
+    }
+    .badge-pass { background: #dcfce7; color: #166534; }
+    .badge-fail { background: #fee2e2; color: #991b1b; }
+    .badge-pending { background: #fef9c3; color: #854d0e; }
+
+    button.btn {
+      background: #196EF5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    button.btn:hover { background: #1558c8; }
+    button.btn-outline {
+      background: white;
+      color: #196EF5;
+      border: 1.5px solid #196EF5;
+    }
+
+    .result {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #f0fdf4;
+      color: #166534;
+      display: none;
+    }
+    .result.fail { background: #fef2f2; color: #991b1b; }
+
+    /* Mobile simulation toggle */
+    .mobile-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .mobile-toggle label { font-size: 0.85rem; color: #444; }
+
+    /* Narrow viewport simulation */
+    body.mobile-sim { max-width: 390px; margin: 0 auto; }
+
+    /* Inline embed container */
+    .embed-container { min-width: 330px; }
+
+    /* Log */
+    #log {
+      font-size: 0.78rem;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 160px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+    #log .entry { padding: 1px 0; }
+    #log .entry.ok { color: #4ec9b0; }
+    #log .entry.err { color: #f48771; }
+    #log .entry.info { color: #9cdcfe; }
+  </style>
+</head>
+<body>
+
+  <h1>Meetergo v4 — Localhost Tests</h1>
+  <p class="subtitle">SDK: dist/v4/browser-v4.js &nbsp;|&nbsp; Booking: <code id="url-display"></code></p>
+
+  <div class="mobile-toggle">
+    <input type="checkbox" id="mobile-sim" onchange="document.body.classList.toggle('mobile-sim', this.checked)">
+    <label for="mobile-sim">Simulate mobile viewport (390px)</label>
+  </div>
+
+  <!-- TEST 1: Inline embed + floating button -->
+  <div class="card">
+    <h2>1. Inline embed + floating button coexist <span class="badge badge-pending" id="t1-badge">—</span></h2>
+    <p class="desc">
+      Inline embed renders below. Floating button visible bottom-right.<br>
+      Expected: both visible, no conflict.
+    </p>
+    <div class="embed-container meetergo-iframe" id="inline-embed-1" data-src=""></div>
+    <div class="result" id="t1-result"></div>
+  </div>
+
+  <!-- TEST 2: Add Guests hidden in embed -->
+  <div class="card">
+    <h2>2. "Add Guests" hidden in embed mode <span class="badge badge-pending" id="t2-badge">—</span></h2>
+    <p class="desc">
+      The booking form last step should NOT show the "Add Guests" button when loaded inside an iframe.<br>
+      Open the inline embed above, navigate to the form step, and verify no "Add Guests" button appears.
+    </p>
+    <button class="btn" onclick="checkAddGuests()">Check now (inspect iframe)</button>
+    <div class="result" id="t2-result"></div>
+  </div>
+
+  <!-- TEST 3: Modal button -->
+  <div class="card">
+    <h2>3. Modal button opens booking <span class="badge badge-pending" id="t3-badge">—</span></h2>
+    <p class="desc">Opens booking as modal. Last step form should NOT show Add Guests inside modal iframe.</p>
+    <button class="btn btn-outline" data-meetergo-link="" id="modal-btn">Book via modal</button>
+    <div class="result" id="t3-result"></div>
+  </div>
+
+  <!-- TEST 4: Height resize on form step -->
+  <div class="card">
+    <h2>4. Height resizes on form step <span class="badge badge-pending" id="t4-badge">—</span></h2>
+    <p class="desc">
+      When navigating from time-slot selection to the form step in the inline embed,
+      the iframe should automatically resize its height via postMessage.
+    </p>
+    <button class="btn" onclick="watchHeight()">Start watching height</button>
+    <div class="result" id="t4-result" style="display:block; background:#f8fafc; color:#334155;">
+      Waiting — navigate to form step in embed above...
+    </div>
+  </div>
+
+  <!-- TEST 5: Double init (floating button update) -->
+  <div class="card">
+    <h2>5. Second init call updates floating button <span class="badge badge-pending" id="t5-badge">—</span></h2>
+    <p class="desc">Calls meetergo('init', {...}) again with new text. Expected: text updates, still 1 button.</p>
+    <button class="btn" onclick="doSecondInit()">Call init again</button>
+    <div class="result" id="t5-result"></div>
+  </div>
+
+  <!-- Event Log -->
+  <div class="card">
+    <h2>Event Log</h2>
+    <div id="log"><div class="entry info">Waiting for SDK...</div></div>
+  </div>
+
+  <script>
+    // Display current booking URL
+    document.getElementById('url-display').textContent = BOOKING_URL
+
+    // Set data-src and data-meetergo-link after BOOKING_URL is known
+    document.getElementById('inline-embed-1').setAttribute('data-src', BOOKING_URL)
+    document.getElementById('modal-btn').setAttribute('data-meetergo-link', BOOKING_URL)
+
+    function log(msg, type = 'info') {
+      const el = document.getElementById('log')
+      const entry = document.createElement('div')
+      entry.className = 'entry ' + type
+      entry.textContent = new Date().toLocaleTimeString() + ' ' + msg
+      el.appendChild(entry)
+      el.scrollTop = el.scrollHeight
+    }
+
+    function pass(id, msg) {
+      const badge = document.getElementById(id + '-badge')
+      const result = document.getElementById(id + '-result')
+      badge.textContent = 'PASS'
+      badge.className = 'badge badge-pass'
+      result.textContent = '✅ ' + msg
+      result.className = 'result'
+      result.style.display = 'block'
+      log('[' + id + '] PASS: ' + msg, 'ok')
+    }
+
+    function fail(id, msg) {
+      const badge = document.getElementById(id + '-badge')
+      const result = document.getElementById(id + '-result')
+      badge.textContent = 'FAIL'
+      badge.className = 'badge badge-fail'
+      result.textContent = '❌ ' + msg
+      result.className = 'result fail'
+      result.style.display = 'block'
+      log('[' + id + '] FAIL: ' + msg, 'err')
+    }
+
+    // Test 1: auto-check after 4s
+    setTimeout(function() {
+      var embed = document.getElementById('inline-embed-1')
+      var hasIframe = embed && embed.querySelector('iframe')
+      var btn = document.querySelector('.mg-float-button')
+      if (hasIframe && btn) {
+        pass('t1', 'Inline embed rendered + floating button visible')
+      } else if (!hasIframe) {
+        fail('t1', 'Inline embed not rendered (no iframe found) — is localhost:4200 running?')
+      } else {
+        fail('t1', 'Floating button not found (.mg-float-button)')
+      }
+    }, 4000)
+
+    // Test 2: check Add Guests button inside iframe (cross-origin won't work on prod, only localhost)
+    function checkAddGuests() {
+      var iframe = document.querySelector('#inline-embed-1 iframe')
+      if (!iframe) {
+        fail('t2', 'No iframe found yet — wait for embed to load first')
+        return
+      }
+      try {
+        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document
+        // Look for "Add Guests" button (Chakra UI button or any button containing that text)
+        var buttons = iframeDoc.querySelectorAll('button')
+        var addGuestsBtn = Array.from(buttons).find(function(b) {
+          return b.textContent && b.textContent.toLowerCase().includes('add guest')
+        })
+        if (addGuestsBtn) {
+          fail('t2', '"Add Guests" button found in embed — should be hidden!')
+        } else {
+          pass('t2', '"Add Guests" button not present in embed (navigate to form step first, then re-check)')
+        }
+      } catch(e) {
+        // cross-origin — can't inspect
+        log('t2: cross-origin iframe — open DevTools and check manually', 'info')
+        document.getElementById('t2-result').textContent = 'ℹ️ Cross-origin: open DevTools → iframe context → check for "Add Guests" button'
+        document.getElementById('t2-result').style.display = 'block'
+      }
+    }
+
+    // Test 3: auto-check modal button binding
+    setTimeout(function() {
+      var btn = document.getElementById('modal-btn')
+      if (btn && btn.getAttribute('data-mg-bound') === 'true') {
+        pass('t3', 'Modal button bound — click to test')
+      } else {
+        fail('t3', 'Modal button not bound after 4s')
+      }
+    }, 4000)
+
+    // Test 4: watch height changes via postMessage
+    var heightLog = []
+    function watchHeight() {
+      log('Watching postMessage height events...', 'info')
+    }
+    window.addEventListener('message', function(e) {
+      // Log ALL messages for debugging
+      if (e.data && typeof e.data === 'object') {
+        var evt = e.data.event || e.data.type || '?'
+        if (!evt.includes('color-scheme') && !evt.includes('webpack') && !String(JSON.stringify(e.data)).includes('calculateSubFramePositioning')) {
+          log('MSG [' + e.origin + '] ' + evt + ' ' + JSON.stringify(e.data).slice(0, 80), 'info')
+        }
+      }
+
+      if (e.data && e.data.event === 'meetergo:page_height') {
+        var h = (e.data.payload && e.data.payload.height) || e.data.height
+        heightLog.push(h)
+        document.getElementById('t4-result').textContent =
+          '📏 Heights received: ' + heightLog.join('px → ') + 'px'
+        log('Height update applied: ' + h + 'px', 'ok')
+        if (heightLog.length >= 2) {
+          pass('t4', 'Multiple height updates received (' + heightLog.length + ' updates)')
+        }
+      }
+      if (e.data && e.data.type === 'meetergo:height-update' && !e.data.event) {
+        var h2 = e.data.height
+        log('Height (legacy format): ' + h2 + 'px', 'info')
+      }
+    })
+
+    // Test 5: second init
+    function doSecondInit() {
+      meetergo('init', {
+        floatingButton: {
+          position: 'bottom-right',
+          text: 'Updated!',
+          link: BOOKING_URL,
+          backgroundColor: '#16a34a',
+          textColor: '#FFFFFF',
+          icon: 'CalendarPlus2',
+          animation: 'none',
+        },
+      })
+      setTimeout(function() {
+        var btns = document.querySelectorAll('.mg-float-button')
+        if (btns.length === 1) {
+          pass('t5', '1 button, text: "' + (btns[0].textContent || '').trim() + '"')
+        } else {
+          fail('t5', btns.length + ' floating buttons found (expected 1)')
+        }
+      }, 500)
+    }
+
+    // Log SDK ready
+    setTimeout(function() {
+      if (window.meetergo && window.meetergo.__sdk) {
+        log('SDK loaded: v' + (window.meetergo.__sdk.version || '?'), 'ok')
+      } else {
+        log('SDK not detected after 2s — check dist/v4/browser-v4.js path', 'err')
+      }
+    }, 2000)
+
+    // Poll actual iframe height every second and show it
+    setInterval(function() {
+      var iframe = document.querySelector('#inline-embed-1 iframe')
+      if (iframe) {
+        var computed = iframe.style.height
+        var t4 = document.getElementById('t4-result')
+        if (heightLog.length === 0) {
+          t4.textContent = 'Iframe style.height = ' + computed + ' (waiting for postMessage...)'
+        }
+      }
+    }, 1000)
+  </script>
+
+</body>
+</html>
