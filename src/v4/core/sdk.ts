@@ -45,16 +45,22 @@ export class MeetergoSDK {
   }
 
   /**
-   * Start the SDK:
-   *   1. Apply v3 backwards-compat settings if present
-   *   2. Start the data-attribute scanner
+   * Apply v3 backwards-compat settings if present.
+   * Called before queue drain so legacy settings don't override queued init calls.
    */
   boot(): void {
-    // v3 backwards-compat: if window.meetergoSettings exists, use it as default ns config
     if (typeof window !== "undefined" && window.meetergoSettings) {
       this.initNamespace({ ns: DEFAULT_NS, ...window.meetergoSettings });
     }
+  }
 
+  /**
+   * Start the data-attribute scanner.
+   * Must be called AFTER the queue is drained so that any meetergo('init', {...})
+   * calls (e.g. floatingButton) have already created their namespace before the
+   * scanner runs — preventing a destroy/recreate cycle.
+   */
+  startScanner(): void {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.scanner.start());
     } else {

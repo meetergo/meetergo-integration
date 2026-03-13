@@ -28,13 +28,17 @@ function initSDK() {
   const existingQueue = existing?.q;
   window.meetergo = callable;
 
-  // Boot first (v3 compat settings + starts data-attr scanner)
+  // Apply v3 compat settings before queue drain
   sdk.boot();
 
   // Drain the queue from the loader snippet (processes init, on, modal, etc.)
   if (Array.isArray(existingQueue) && existingQueue.length > 0) {
     sdk.drainQueue(existingQueue);
   }
+
+  // Start scanner AFTER queue drain so namespaces (e.g. floatingButton) already
+  // exist when the scanner runs — avoids a destroy/recreate conflict.
+  sdk.startScanner();
 }
 
 // Defer to DOM-ready — document.body must exist before any module can append to it
