@@ -13,3 +13,6 @@ coverage
 *.log
 
 dist
+
+# Local test files
+test-v4-*.html
