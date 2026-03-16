@@ -91,7 +91,21 @@ export class InlineEmbedManager {
     container.setAttribute("data-mg-bound", "true");
     container.classList.add("mg-inline");
     const alignment = config.alignment ?? this.config.iframeAlignment;
-    if (alignment) container.setAttribute("data-align", alignment);
+    if (alignment) {
+      container.setAttribute("data-align", alignment);
+      // Apply margin directly as inline style — more reliable than CSS attribute selectors
+      // across all browsers and regardless of CSS injection timing.
+      if (alignment === "left") {
+        container.style.marginLeft = "0";
+        container.style.marginRight = "auto";
+      } else if (alignment === "center") {
+        container.style.marginLeft = "auto";
+        container.style.marginRight = "auto";
+      } else if (alignment === "right") {
+        container.style.marginLeft = "auto";
+        container.style.marginRight = "0";
+      }
+    }
 
     const extraParams: Record<string, string> = {};
     const prefill: MeetergoPrefill = { ...this.config.prefill, ...config.prefill };

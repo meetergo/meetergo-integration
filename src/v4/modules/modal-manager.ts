@@ -105,6 +105,9 @@ export class ModalManager {
       colorSchemeHandle = result.colorSchemeHandle;
     }
 
+    // Mark the iframe so routing forms inside it don't re-trigger open-modal
+    iframe.name = "meetergo-embedded-modal";
+
     this.currentColorSchemeHandle = colorSchemeHandle;
 
     // Fill the content container fully

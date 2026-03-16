@@ -166,7 +166,6 @@ export const MeetergoCSSv4 = {
       overflow: hidden;
       position: relative;
       display: block;
-      width: 100%;
       max-width: 100%;
     }
     .mg-inline iframe {
@@ -176,10 +175,9 @@ export const MeetergoCSSv4 = {
       display: block;
       transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
     }
-    .mg-inline[data-align="left"] iframe   { margin-right: auto; }
-    .mg-inline[data-align="center"] iframe { margin-left: auto; margin-right: auto; }
-    .mg-inline[data-align="right"] iframe  { margin-left: auto; }
-    .mg-inline:not([data-align]) iframe    { margin-left: auto; margin-right: auto; }
+    .mg-inline[data-align="left"]   { margin-right: auto; margin-left: 0; }
+    .mg-inline[data-align="center"] { margin-left: auto; margin-right: auto; }
+    .mg-inline[data-align="right"]  { margin-left: auto; margin-right: 0; }
   `,
 
   animations: `

@@ -173,6 +173,42 @@
     <div class="result" id="t5-result"></div>
   </div>
 
+  <!-- TEST 6: data-align -->
+  <div class="card">
+    <h2>6. data-align — left / center / right <span class="badge badge-pending" id="t6-badge">—</span></h2>
+    <p class="desc">Three embeds at <code>width: 60%</code> — always narrower than the viewport so alignment is visible.<br>
+      Visual: green border = left, blue = center, pink = right.</p>
+    <p style="font-size:0.8rem;font-weight:600;margin:8px 0 4px;">Left</p>
+    <div class="meetergo-iframe" id="align-left"
+      data-align="left"
+      style="width:60%;min-height:200px;border:2px dashed #86efac;border-radius:6px;">
+    </div>
+    <p style="font-size:0.8rem;font-weight:600;margin:8px 0 4px;">Center</p>
+    <div class="meetergo-iframe" id="align-center"
+      data-align="center"
+      style="width:60%;min-height:200px;border:2px dashed #93c5fd;border-radius:6px;">
+    </div>
+    <p style="font-size:0.8rem;font-weight:600;margin:8px 0 4px;">Right</p>
+    <div class="meetergo-iframe" id="align-right"
+      data-align="right"
+      style="width:60%;min-height:200px;border:2px dashed #f9a8d4;border-radius:6px;">
+    </div>
+    <div class="result" id="t6-result"></div>
+  </div>
+
+  <!-- TEST 7: Routing form inline embed -->
+  <div class="card">
+    <h2>7. Routing form — inline embed</h2>
+    <p class="desc">
+      Embeds the routing form as an inline iframe.<br>
+      URL: <code>http://localhost:4210/f/5c02f533-e33c-4ed6-a155-8bf472479c8d?lang=de</code>
+    </p>
+    <div class="meetergo-iframe" id="routing-form-embed"
+      data-src="http://localhost:4210/f/5c02f533-e33c-4ed6-a155-8bf472479c8d?lang=de"
+      style="min-height:400px;">
+    </div>
+  </div>
+
   <!-- Event Log -->
   <div class="card">
     <h2>Event Log</h2>
@@ -186,6 +222,39 @@
     // Set data-src and data-meetergo-link after BOOKING_URL is known
     document.getElementById('inline-embed-1').setAttribute('data-src', BOOKING_URL)
     document.getElementById('modal-btn').setAttribute('data-meetergo-link', BOOKING_URL)
+    var ALIGN_URL = BOOKING_URL
+    document.getElementById('align-left').setAttribute('data-src', ALIGN_URL)
+    document.getElementById('align-center').setAttribute('data-src', ALIGN_URL)
+    document.getElementById('align-right').setAttribute('data-src', ALIGN_URL)
+
+    // Test 6: check data-align attribute is preserved and iframes rendered
+    setTimeout(function() {
+      var checks = ['left', 'center', 'right'].map(function(align) {
+        var el = document.getElementById('align-' + align)
+        if (!el.querySelector('iframe')) return align + ': no iframe'
+        if (el.getAttribute('data-align') !== align) return align + ': data-align missing'
+        return null
+      })
+      var fails = checks.filter(Boolean)
+
+      // Diagnostic: show computed margin values
+      var diagLines = ['left', 'center', 'right'].map(function(align) {
+        var el = document.getElementById('align-' + align)
+        var cs = window.getComputedStyle(el)
+        return align + ': marginLeft=' + cs.marginLeft + ', marginRight=' + cs.marginRight + ', width=' + cs.width
+      })
+      var diagEl = document.getElementById('t6-result')
+      diagEl.style.display = 'block'
+      diagEl.style.background = '#f8fafc'
+      diagEl.style.color = '#334155'
+      diagEl.innerHTML = '<strong>Computed styles:</strong><br>' + diagLines.join('<br>')
+
+      if (fails.length === 0) {
+        pass('t6', 'All 3 alignment iframes rendered with correct data-align — visual check above')
+      } else {
+        fail('t6', fails.join(', '))
+      }
+    }, 4000)
 
     function log(msg, type = 'info') {
       const el = document.getElementById('log')
