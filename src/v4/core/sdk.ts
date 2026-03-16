@@ -39,7 +39,8 @@ export class MeetergoSDK {
         this.getOrCreate(ns).toggleSidebar();
       },
       embedInline: (link, container, ns, prefill) => {
-        this.getOrCreate(ns).inline({ link, elementOrSelector: container, prefill });
+        const align = container.getAttribute("data-align") as "left" | "center" | "right" | null;
+        this.getOrCreate(ns).inline({ link, elementOrSelector: container, prefill, ...(align && { alignment: align }) });
       },
     });
   }
@@ -66,6 +67,26 @@ export class MeetergoSDK {
     } else {
       this.scanner.start();
     }
+    this.startGlobalListeners();
+  }
+
+  /**
+   * Global postMessage listener for messages sent via window.top.postMessage
+   * from inside iframes (e.g. routing forms that open a modal for a meeting type).
+   */
+  private startGlobalListeners(): void {
+    window.addEventListener("message", (e: MessageEvent) => {
+      const data = e.data as Record<string, unknown>;
+      if (!data || typeof data !== "object") return;
+
+      // Routing form / formFirst: open a modal with the given link + params
+      if (data.event === "open-modal") {
+        const payload = data.data as { link?: string; params?: Record<string, string> } | undefined;
+        const link = payload?.link ?? "";
+        if (!link) return;
+        this.getOrCreate(DEFAULT_NS).openModal(link, payload?.params);
+      }
+    });
   }
 
   /**
