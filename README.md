@@ -4,7 +4,7 @@
 
 [![Version](https://img.shields.io/badge/version-v4.0-blue.svg)](https://github.com/meetergo/meetergo-integration)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178c6.svg)](https://www.typescriptlang.org/)
-[![AWS CDN](https://img.shields.io/badge/AWS-CDN%20Ready-orange.svg)](https://aws.amazon.com/cloudfront/)
+[![CDN](https://img.shields.io/badge/CDN-Ready-brightgreen.svg)](https://cdn.meetergo.com)
 
 ## Quick Start
 
@@ -17,7 +17,7 @@ Paste the loader snippet into `<head>` — that's it:
     w.meetergo.version = '4';
     var e = d.createElement(s); e.async = 1; e.src = u;
     d.head.appendChild(e);
-  })(window, document, 'script', 'https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js');
+  })(window, document, 'script', 'https://cdn.meetergo.com/v4/integration.js');
 
   meetergo('init', {
     onBookingSuccessful: function(data) {
@@ -347,7 +347,7 @@ v4 is backwards compatible — no immediate changes required. To adopt the new A
     onSuccess: function(data) { ... },
   };
 </script>
-<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v3.js"></script>
+<script src="https://cdn.meetergo.com/v3/integration.js"></script>
 ```
 
 **After (v4):**
@@ -358,7 +358,7 @@ v4 is backwards compatible — no immediate changes required. To adopt the new A
     w.meetergo.version = '4';
     var e = d.createElement(s); e.async = 1; e.src = u;
     d.head.appendChild(e);
-  })(window, document, 'script', 'https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js');
+  })(window, document, 'script', 'https://cdn.meetergo.com/v4/integration.js');
 
   meetergo('init', {
     floatingButton: { link: '...', position: 'bottom-right' },
@@ -401,10 +401,10 @@ The test page (`test-v4.html`) covers all embed types: inline, modal, sidebar, f
 
 ```html
 <!-- v4 (current) -->
-<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js"></script>
+<script src="https://cdn.meetergo.com/v4/integration.js"></script>
 
 <!-- v3 (legacy) -->
-<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v3.js"></script>
+<script src="https://cdn.meetergo.com/v3/integration.js"></script>
 ```
 
 ---
