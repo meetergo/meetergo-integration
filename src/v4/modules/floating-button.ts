@@ -76,28 +76,23 @@ export class FloatingButton {
     const margin = "16px";
     const styles: Partial<CSSStyleDeclaration> = {};
 
-    if (position.includes("top"))    styles.top    = margin;
-    if (position.includes("bottom")) styles.bottom = margin;
-    if (position.includes("left"))   styles.left   = margin;
-    if (position.includes("right"))  styles.right  = margin;
+    // Position is always "<row>-<col>" on the 3x3 grid (see Position type):
+    // row  top | middle | bottom  -> vertical anchor
+    // col  left | center | right  -> horizontal anchor
+    // "middle"/"center" pin the midpoint to 50% and offset it back with translate.
+    const [row, col] = position.split("-");
 
-    if (position.includes("center")) {
-      if (position.startsWith("top") || position.startsWith("bottom")) {
-        // horizontal center
-        styles.left = "50%";
-        styles.transform = "translateX(-50%)";
-      } else {
-        // vertical center
-        styles.top = "50%";
-        styles.transform = "translateY(-50%)";
-      }
-    }
+    if (row === "top") styles.top = margin;
+    else if (row === "bottom") styles.bottom = margin;
+    else styles.top = "50%"; // middle
 
-    if (position === "middle-center") {
-      styles.top = "50%";
-      styles.left = "50%";
-      styles.transform = "translate(-50%, -50%)";
-    }
+    if (col === "left") styles.left = margin;
+    else if (col === "right") styles.right = margin;
+    else styles.left = "50%"; // center
+
+    const tx = col === "center" ? "-50%" : "0";
+    const ty = row === "middle" ? "-50%" : "0";
+    if (tx !== "0" || ty !== "0") styles.transform = `translate(${tx}, ${ty})`;
 
     return styles;
   }
