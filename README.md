@@ -17,7 +17,7 @@ Paste the loader snippet into `<head>` — that's it:
     w.meetergo.version = '4';
     var e = d.createElement(s); e.async = 1; e.src = u;
     d.head.appendChild(e);
-  })(window, document, 'script', 'https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js');
+  })(window, document, 'script', 'https://cdn.meetergo.com/v4/integration.js');
 
   meetergo('init', {
     onBookingSuccessful: function(data) {
@@ -358,7 +358,7 @@ v4 is backwards compatible — no immediate changes required. To adopt the new A
     w.meetergo.version = '4';
     var e = d.createElement(s); e.async = 1; e.src = u;
     d.head.appendChild(e);
-  })(window, document, 'script', 'https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js');
+  })(window, document, 'script', 'https://cdn.meetergo.com/v4/integration.js');
 
   meetergo('init', {
     floatingButton: { link: '...', position: 'bottom-right' },
@@ -399,13 +399,20 @@ The test page (`test-v4.html`) covers all embed types: inline, modal, sidebar, f
 
 ## CDN
 
-```html
-<!-- v4 (current) -->
-<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v4.js"></script>
+The canonical, always-latest build is served from Bunny. Use this URL for all
+new integrations:
 
-<!-- v3 (legacy) -->
-<script src="https://liv-showcase.s3.eu-central-1.amazonaws.com/browser-v3.js"></script>
+```html
+<!-- v4 (current, canonical) -->
+<script src="https://cdn.meetergo.com/v4/integration.js"></script>
 ```
+
+> **Deprecated mirrors — do not use for new setups.** The old S3 URLs
+> (`liv-showcase.s3.eu-central-1.amazonaws.com/browser-v2.js` / `browser-v3.js` /
+> `browser-v4.js`) are legacy and are no longer the source of truth. They remain
+> reachable only so existing embeds keep working. `browser-v4.js` is the same v4
+> build as the canonical URL and must be kept in sync on every release until it
+> is retired; `browser-v3.js`/`browser-v2.js` are the pre-v4 generation.
 
 ---
 
