@@ -20,6 +20,7 @@ import type {
   MeetergoPrefill,
   UiConfig,
   InlineEmbedConfig,
+  BookingSuccessfulData,
 } from "../types/index.js";
 
 export const SDK_VERSION = "4.0.0";
@@ -85,6 +86,20 @@ export class MeetergoSDK {
         const link = payload?.link ?? "";
         if (!link) return;
         this.getOrCreate(DEFAULT_NS).openModal(link, payload?.params);
+        return;
+      }
+
+      // Booking completed inside an embedded iframe. The booking page posts
+      // { event: "booking-successful", data } to its parent; bridge it onto the
+      // typed bus so onSuccess / onBookingSuccessful subscribers fire. The
+      // message carries no namespace, so broadcast to every live namespace
+      // (mirrors the single global handler v3 used for meetergoSettings.onSuccess).
+      if (data.event === "booking-successful") {
+        const payload = (data.data ?? {}) as BookingSuccessfulData;
+        for (const ns of this.namespaces.values()) {
+          ns.emitBookingSuccessful(payload);
+        }
+        return;
       }
     });
   }
