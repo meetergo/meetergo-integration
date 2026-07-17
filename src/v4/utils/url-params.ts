@@ -17,6 +17,33 @@ const RESERVED_PARAMS = new Set([
 ]);
 
 /**
+ * Marketing / attribution params forwarded by default when the embedder
+ * has not configured `forwardQueryParams` explicitly.
+ *
+ * Before v4 the embed script forwarded *every* parent-page query param to the
+ * booking iframe automatically, so ad-campaign attribution (UTMs, click IDs)
+ * flowed through to the booking and any post-booking redirect without setup.
+ * v4 made forwarding fully opt-in, which silently broke that attribution for
+ * existing embeds. Restoring a conservative default — the well-known marketing
+ * param family — keeps tracking working out of the box while still not leaking
+ * arbitrary parent-page params (use `forwardQueryParams: true` for that).
+ */
+const DEFAULT_FORWARD_PARAMS = new Set([
+  // UTM (Google/analytics standard)
+  "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
+  "utm_id",
+  // Ad-platform click identifiers
+  "fbclid",    // Meta / Facebook
+  "gclid", "gbraid", "wbraid", "gad_source", // Google Ads
+  "msclkid",   // Microsoft Ads
+  "ttclid",    // TikTok
+  "twclid",    // X / Twitter
+  "li_fat_id", // LinkedIn
+  "igshid",    // Instagram
+  "epik",      // Pinterest
+]);
+
+/**
  * Build a full iframe src URL from a base link + params.
  */
 export function buildIframeURL(
@@ -71,16 +98,26 @@ export function collectIframeParams(options: {
     Object.assign(result, options.extraParams);
   }
 
-  // 3. Forward parent-page query params (opt-in)
-  if (options.forwardQueryParams && typeof window !== "undefined") {
+  // 3. Forward parent-page query params.
+  //
+  //   - unset       → forward the marketing/attribution family (default, so
+  //                    ad tracking keeps working out of the box)
+  //   - `true`      → forward every param (except reserved)
+  //   - `string[]`  → forward only the listed params
+  //   - `false`     → forward nothing
+  const forward = options.forwardQueryParams;
+  if (forward !== false && typeof window !== "undefined") {
     const pageParams = new URLSearchParams(window.location.search);
     pageParams.forEach((value, key) => {
       if (RESERVED_PARAMS.has(key)) return;
 
-      const forward = options.forwardQueryParams;
-      if (forward === true) {
-        result[key] = value;
-      } else if (Array.isArray(forward) && forward.includes(key)) {
+      const shouldForward =
+        forward === true
+          ? true
+          : Array.isArray(forward)
+            ? forward.includes(key)
+            : DEFAULT_FORWARD_PARAMS.has(key); // unset → marketing default
+      if (shouldForward) {
         result[key] = value;
       }
     });
