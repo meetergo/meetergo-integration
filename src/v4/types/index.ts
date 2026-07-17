@@ -278,7 +278,16 @@ export interface NamespaceConfig {
   /** Global prefill for all embeds in this namespace */
   prefill?: MeetergoPrefill;
 
-  /** Forward current page query params to iframes (opt-in) */
+  /**
+   * Forward parent-page query params to booking iframes.
+   *
+   *   - unset      → forward the marketing/attribution family only
+   *                  (utm_*, fbclid, gclid, ttclid, …) so ad tracking works
+   *                  out of the box
+   *   - `true`     → forward every param (except reserved booking params)
+   *   - `string[]` → forward only the listed params
+   *   - `false`    → forward nothing
+   */
   forwardQueryParams?: boolean | string[];
 
   /** Floating button configuration */
