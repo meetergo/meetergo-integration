@@ -17,33 +17,6 @@ const RESERVED_PARAMS = new Set([
 ]);
 
 /**
- * Marketing / attribution params forwarded by default when the embedder
- * has not configured `forwardQueryParams` explicitly.
- *
- * Before v4 the embed script forwarded *every* parent-page query param to the
- * booking iframe automatically, so ad-campaign attribution (UTMs, click IDs)
- * flowed through to the booking and any post-booking redirect without setup.
- * v4 made forwarding fully opt-in, which silently broke that attribution for
- * existing embeds. Restoring a conservative default — the well-known marketing
- * param family — keeps tracking working out of the box while still not leaking
- * arbitrary parent-page params (use `forwardQueryParams: true` for that).
- */
-const DEFAULT_FORWARD_PARAMS = new Set([
-  // UTM (Google/analytics standard)
-  "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
-  "utm_id",
-  // Ad-platform click identifiers
-  "fbclid",    // Meta / Facebook
-  "gclid", "gbraid", "wbraid", "gad_source", // Google Ads
-  "msclkid",   // Microsoft Ads
-  "ttclid",    // TikTok
-  "twclid",    // X / Twitter
-  "li_fat_id", // LinkedIn
-  "igshid",    // Instagram
-  "epik",      // Pinterest
-]);
-
-/**
  * Build a full iframe src URL from a base link + params.
  */
 export function buildIframeURL(
@@ -100,23 +73,29 @@ export function collectIframeParams(options: {
 
   // 3. Forward parent-page query params.
   //
-  //   - unset       → forward the marketing/attribution family (default, so
-  //                    ad tracking keeps working out of the box)
-  //   - `true`      → forward every param (except reserved)
-  //   - `string[]`  → forward only the listed params
-  //   - `false`     → forward nothing
+  // Pre-v4 the embed script forwarded EVERY parent-page query param into the
+  // booking iframe automatically. v4 made that opt-in, which silently broke
+  // attribution for existing embeds: campaign parameters stopped reaching the
+  // booking and the post-booking redirect. Restricting the default to a
+  // well-known marketing allow-list was not enough either — vendor- and
+  // agency-specific parameters (e.g. `lm_*`) are exactly what many setups
+  // attribute on, and they were still dropped. So the default forwards
+  // everything again, matching the pre-v4 behaviour.
+  //
+  //   - unset      → forward every param (except reserved) — legacy default
+  //   - `true`     → forward every param (except reserved)
+  //   - `string[]` → forward only the listed params
+  //   - `false`    → forward nothing
   const forward = options.forwardQueryParams;
   if (forward !== false && typeof window !== "undefined") {
     const pageParams = new URLSearchParams(window.location.search);
     pageParams.forEach((value, key) => {
       if (RESERVED_PARAMS.has(key)) return;
 
-      const shouldForward =
-        forward === true
-          ? true
-          : Array.isArray(forward)
-            ? forward.includes(key)
-            : DEFAULT_FORWARD_PARAMS.has(key); // unset → marketing default
+      // An array is an explicit allow-list; unset and `true` forward all.
+      const shouldForward = Array.isArray(forward)
+        ? forward.includes(key)
+        : true;
       if (shouldForward) {
         result[key] = value;
       }
