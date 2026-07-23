@@ -281,9 +281,8 @@ export interface NamespaceConfig {
   /**
    * Forward parent-page query params to booking iframes.
    *
-   *   - unset      → forward the marketing/attribution family only
-   *                  (utm_*, fbclid, gclid, ttclid, …) so ad tracking works
-   *                  out of the box
+   *   - unset      → forward every param (except reserved booking params),
+   *                  matching the pre-v4 default so attribution keeps working
    *   - `true`     → forward every param (except reserved booking params)
    *   - `string[]` → forward only the listed params
    *   - `false`    → forward nothing
