@@ -32,7 +32,7 @@
     "esbuild-v4-browser:dev": "esbuild src/v4/browser.ts --bundle --sourcemap=inline --outfile=dist/v4/browser.js",
     "esbuild-v4-browser:watch": "esbuild src/v4/browser.ts --bundle --watch --sourcemap=inline --outfile=dist/v4/browser.js",
     "esbuild-v4-esm": "esbuild src/v4/index.ts --bundle --format=esm --external:react --external:react-dom --minify --outfile=dist/v4/index.esm.js",
-    "deploy-v4-prod": "npm run build-v4 && curl -fsS -X PUT -H \"AccessKey: $BUNNY_CDN_STORAGE_KEY\" --data-binary @dist/v4/browser-ultra.js \"https://storage.bunnycdn.com/meetergo-cdn-prod/v4/integration.js\" && curl -fsS -X POST \"https://api.bunny.net/purge?url=https://cdn.meetergo.com/v4/integration.js\" -H \"AccessKey: $BUNNY_API_KEY\""
+    "deploy-v4-prod": "npm run build-v4 && bash scripts/deploy-cdn.sh"
   },
   "dependencies": {
     "esbuild": "^0.25.1"
