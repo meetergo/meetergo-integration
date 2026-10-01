@@ -18,6 +18,12 @@ import {
   createUpdatedHeightState,
   HeightState,
 } from '../utils/iframe-height';
+import { holdFocusInModal, ModalFocusHandle } from '../utils/modal-focus';
+
+// Visibility flips after the fade on close; on open it must flip at once,
+// otherwise the close button is still hidden when it is asked to take focus.
+const MODAL_CLOSE_TRANSITION = 'visibility 0s linear 0.1s,opacity 0.3s ease';
+const MODAL_OPEN_TRANSITION = 'opacity 0.3s ease';
 
 export interface ModalSettings {
   link: string;
@@ -31,7 +37,7 @@ export interface ModalOptions {
 
 export class ModalManager {
   private static instance: ModalManager;
-  private lastActiveElement: Element | null = null;
+  private focusHandle: ModalFocusHandle | null = null;
   private eventListeners: Map<string, EventListener> = new Map();
   private onEventCallback?: (event: MeetergoModalEvent) => void;
   private trackedTimeouts: Set<number> = new Set();
@@ -127,8 +133,6 @@ export class ModalManager {
    */
   public openModal(): void {
     try {
-      this.lastActiveElement = document.activeElement;
-      
       const modal = domCache.getElementById('meetergo-modal');
       if (!modal) {
         errorHandler.handleError({
@@ -140,6 +144,7 @@ export class ModalManager {
       }
 
       // Track current modal state
+      modal.style.transition = MODAL_OPEN_TRANSITION;
       modal.style.visibility = 'visible';
       modal.style.opacity = '1';
 
@@ -151,12 +156,10 @@ export class ModalManager {
         spinner.style.opacity = '1';
       }
 
-      // Focus close button for accessibility
-      const closeButton = modal.querySelector('.close-button') as HTMLElement;
-      if (closeButton) {
-        setTimeout(() => {
-          closeButton.focus();
-        }, 100);
+      // Move focus into the modal and keep the host page out of the tab order
+      if (!this.focusHandle) {
+        const closeButton = modal.querySelector('.close-button') as HTMLElement | null;
+        this.focusHandle = holdFocusInModal(modal, closeButton);
       }
 
       // Prevent body scrolling
@@ -190,6 +193,7 @@ export class ModalManager {
         return;
       }
 
+      modal.style.transition = MODAL_CLOSE_TRANSITION;
       modal.style.visibility = 'hidden';
       modal.style.opacity = '0';
 
@@ -217,12 +221,9 @@ export class ModalManager {
       // Restore body scrolling
       document.body.style.overflow = '';
 
-      // Restore focus
-      if (this.lastActiveElement instanceof HTMLElement) {
-        setTimeout(() => {
-          (this.lastActiveElement as HTMLElement).focus();
-        }, 100);
-      }
+      // Give the host page back and return focus to whatever opened the modal
+      this.focusHandle?.release();
+      this.focusHandle = null;
 
       // Reset modal state
       this.emitEvent({ type: 'modal_closed' });
@@ -266,7 +267,7 @@ export class ModalManager {
       Object.assign(modal.style, {
         zIndex: '999999',
         position: 'fixed',
-        transition: 'visibility 0s linear 0.1s,opacity 0.3s ease',
+        transition: MODAL_CLOSE_TRANSITION,
         top: '0',
         left: '0',
         width: '100%',
@@ -296,9 +297,10 @@ export class ModalManager {
       // Assemble modal
       const fragment = document.createDocumentFragment();
       fragment.appendChild(overlay);
+      // Close button precedes the iframe so Tab moves from it into the booking page
+      fragment.appendChild(closeButton);
       fragment.appendChild(content);
       fragment.appendChild(spinner);
-      fragment.appendChild(closeButton);
       fragment.appendChild(title);
       fragment.appendChild(description);
 
@@ -696,8 +698,8 @@ export class ModalManager {
       domCache.removeCached('meetergo-modal');
       domCache.removeCached('meetergo-modal-content');
 
-      // Reset modal state
-      this.lastActiveElement = null;
+      this.focusHandle?.release();
+      this.focusHandle = null;
 
     } catch (error) {
       errorHandler.handleError({

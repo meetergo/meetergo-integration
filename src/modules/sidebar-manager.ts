@@ -111,15 +111,8 @@ export class SidebarManager {
       
       if (sidebar) {
         const isOpen = sidebar.classList.contains('open');
-        const toggleButton = document.querySelector(`.meetergo-sidebar-toggle-${position}`) as HTMLElement;
-        
-        if (isOpen) {
-          sidebar.classList.remove('open');
-          toggleButton?.classList.remove('meetergo-sidebar-toggle-hidden');
-        } else {
-          sidebar.classList.add('open');
-          toggleButton?.classList.add('meetergo-sidebar-toggle-hidden');
-        }
+        const toggleButton = document.querySelector(`.meetergo-sidebar-toggle-${position}`) as HTMLElement | null;
+        this.setSidebarOpen(sidebar, toggleButton, !isOpen);
       }
     } catch (error) {
       errorHandler.handleError({
@@ -128,6 +121,24 @@ export class SidebarManager {
         context: 'SidebarManager.toggleSidebar',
         error: error as Error
       });
+    }
+  }
+
+  /**
+   * Open or close a sidebar. Whichever of sidebar and toggle is hidden is made
+   * inert, so keyboard focus never lands on something off-screen or invisible.
+   */
+  private setSidebarOpen(sidebar: HTMLElement, toggleButton: HTMLElement | null, open: boolean): void {
+    const focusWasInside = sidebar.contains(document.activeElement);
+    sidebar.classList.toggle('open', open);
+    sidebar.toggleAttribute('inert', !open);
+    toggleButton?.classList.toggle('meetergo-sidebar-toggle-hidden', open);
+    toggleButton?.toggleAttribute('inert', open);
+
+    if (open) {
+      (sidebar.querySelector('.meetergo-sidebar-close') as HTMLElement | null)?.focus({ preventScroll: true });
+    } else if (focusWasInside) {
+      toggleButton?.focus({ preventScroll: true });
     }
   }
 
@@ -162,6 +173,8 @@ export class SidebarManager {
     const sidebar = document.createElement('div');
     sidebar.classList.add('meetergo-sidebar', `meetergo-sidebar-${position}`);
     sidebar.style.width = width;
+    // Closed sidebars sit off-screen; keep them out of the tab order
+    sidebar.setAttribute('inert', '');
 
     // Create close button
     const closeButton = this.createCloseButton();
@@ -322,8 +335,7 @@ export class SidebarManager {
       // Close button click handler
       const closeButton = sidebar.querySelector('.meetergo-sidebar-close');
       const closeHandler = () => {
-        sidebar.classList.remove('open');
-        toggleButton.classList.remove('meetergo-sidebar-toggle-hidden');
+        this.setSidebarOpen(sidebar, toggleButton, false);
       };
       closeButton?.addEventListener('click', closeHandler);
       listeners.push(closeHandler);

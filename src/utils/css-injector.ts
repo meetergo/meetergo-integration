@@ -201,6 +201,11 @@ export const MeetergoCSSTemplates = {
       color: #000;
     }
 
+    #meetergo-modal .close-button:focus-visible {
+      outline: 2px solid #0A64BC;
+      outline-offset: 2px;
+    }
+
     .meetergo-spinner {
       position: absolute;
       top: 50%;
@@ -432,6 +437,12 @@ export const MeetergoCSSTemplates = {
 
     .meetergo-sidebar-close:hover {
       color: #000;
+    }
+
+    .meetergo-sidebar-toggle:focus-visible,
+    .meetergo-sidebar-close:focus-visible {
+      outline: 2px solid #0A64BC;
+      outline-offset: 2px;
     }
 
     .meetergo-sidebar-iframe {
