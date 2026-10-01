@@ -7,7 +7,8 @@
  *   - Color scheme flash prevention via IframeFactory
  *   - ARIA live region for loading state
  *   - EventBus integration (no more single callback)
- *   - role="alertdialog" + aria-live loading region inside modal
+ *   - aria-live loading region inside modal
+ *   - Host page made inert while open, so focus cannot slip behind the modal
  */
 
 import { createIframe } from "../utils/iframe-factory.js";
@@ -16,6 +17,12 @@ import { errorHandler } from "../utils/error-handler.js";
 import type { EventBus } from "../core/event-bus.js";
 import type { PrerenderManager } from "../core/prerender.js";
 import type { MeetergoPrefill, NamespaceConfig } from "../types/index.js";
+import { holdFocusInModal, ModalFocusHandle } from "../../utils/modal-focus.js";
+
+// Visibility flips after the fade on close; on open it must flip at once,
+// otherwise the close button is still hidden when it is asked to take focus.
+const MODAL_CLOSE_TRANSITION = "visibility 0s linear 0.1s, opacity 0.3s ease";
+const MODAL_OPEN_TRANSITION = "opacity 0.3s ease";
 
 export class ModalManager {
   private readonly ns: string;
@@ -23,7 +30,7 @@ export class ModalManager {
   private readonly prerender: PrerenderManager | null;
   private readonly config: NamespaceConfig;
 
-  private lastActiveElement: Element | null = null;
+  private focusHandle: ModalFocusHandle | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private currentLink: string | null = null;
   private currentColorSchemeHandle: { stop(): void } | null = null;
@@ -146,14 +153,16 @@ export class ModalManager {
     const modal = domCache.getElementById(this.modalId());
     if (!modal) return;
 
-    this.lastActiveElement = document.activeElement;
+    modal.style.transition = MODAL_OPEN_TRANSITION;
     modal.style.visibility = "visible";
     modal.style.opacity = "1";
     document.body.style.overflow = "hidden";
 
-    // Focus close button for accessibility
-    const closeBtn = modal.querySelector(".mg-close-button") as HTMLElement | null;
-    setTimeout(() => closeBtn?.focus(), 100);
+    // Move focus into the modal and keep the host page out of the tab order
+    if (!this.focusHandle) {
+      const closeBtn = modal.querySelector(".mg-close-button") as HTMLElement | null;
+      this.focusHandle = holdFocusInModal(modal, closeBtn);
+    }
 
     this.bus.emit("modalOpened", { link: this.currentLink ?? "" });
   }
@@ -163,6 +172,7 @@ export class ModalManager {
     if (!modal) return;
 
     this.clearLoadTimeout();
+    modal.style.transition = MODAL_CLOSE_TRANSITION;
     modal.style.visibility = "hidden";
     modal.style.opacity = "0";
     document.body.style.overflow = "";
@@ -189,12 +199,9 @@ export class ModalManager {
       }, 300);
     }
 
-    // Restore focus
-    setTimeout(() => {
-      if (this.lastActiveElement instanceof HTMLElement) {
-        this.lastActiveElement.focus();
-      }
-    }, 100);
+    // Give the host page back and return focus to whatever opened the modal
+    this.focusHandle?.release();
+    this.focusHandle = null;
 
     this.bus.emit("modalClosed", {});
     errorHandler.announce("Booking calendar closed.");
@@ -244,7 +251,7 @@ export class ModalManager {
   private createModalElements(): void {
     const modal = document.createElement("div");
     modal.id = this.modalId();
-    modal.setAttribute("role", "alertdialog");
+    modal.setAttribute("role", "dialog");
     modal.setAttribute("aria-modal", "true");
     modal.setAttribute("aria-labelledby", `${this.modalId()}-title`);
     modal.setAttribute("aria-describedby", `${this.modalId()}-desc`);
@@ -252,7 +259,7 @@ export class ModalManager {
     Object.assign(modal.style, {
       zIndex: "999999",
       position: "fixed",
-      transition: "visibility 0s linear 0.1s, opacity 0.3s ease",
+      transition: MODAL_CLOSE_TRANSITION,
       top: "0",
       left: "0",
       width: "100%",
@@ -337,7 +344,8 @@ export class ModalManager {
     desc.textContent = "Calendar booking interface";
     Object.assign(desc.style, srOnly);
 
-    modal.append(overlay, content, spinner, liveRegion, closeBtn, title, desc);
+    // Close button precedes the iframe so Tab moves from it into the booking page
+    modal.append(overlay, closeBtn, content, spinner, liveRegion, title, desc);
     document.body.appendChild(modal);
   }
 

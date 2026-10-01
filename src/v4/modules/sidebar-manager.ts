@@ -72,16 +72,14 @@ export class SidebarManager {
   open(position: SidebarPosition = "right"): void {
     const entry = this.activeSidebars.get(position);
     if (!entry) return;
-    entry.sidebar.classList.add("open");
-    entry.toggle.classList.add("mg-sidebar-toggle-hidden");
+    this.setOpen(entry, true);
     this.bus.emit("sidebarOpened", { position });
   }
 
   close(position: SidebarPosition = "right"): void {
     const entry = this.activeSidebars.get(position);
     if (!entry) return;
-    entry.sidebar.classList.remove("open");
-    entry.toggle.classList.remove("mg-sidebar-toggle-hidden");
+    this.setOpen(entry, false);
     this.bus.emit("sidebarClosed", { position });
   }
 
@@ -104,6 +102,25 @@ export class SidebarManager {
 
   // ── Private ───────────────────────────────────────────────────────────────
 
+  /**
+   * Whichever of sidebar and toggle is hidden is made inert, so keyboard focus
+   * never lands on something off-screen or invisible.
+   */
+  private setOpen(entry: { sidebar: HTMLElement; toggle: HTMLElement }, open: boolean): void {
+    const { sidebar, toggle } = entry;
+    const focusWasInside = sidebar.contains(document.activeElement);
+    sidebar.classList.toggle("open", open);
+    sidebar.toggleAttribute("inert", !open);
+    toggle.classList.toggle("mg-sidebar-toggle-hidden", open);
+    toggle.toggleAttribute("inert", open);
+
+    if (open) {
+      (sidebar.querySelector(".mg-sidebar-close") as HTMLElement | null)?.focus({ preventScroll: true });
+    } else if (focusWasInside) {
+      toggle.focus({ preventScroll: true });
+    }
+  }
+
   private buildElements(
     config: SidebarConfig,
     position: SidebarPosition
@@ -117,6 +134,8 @@ export class SidebarManager {
     sidebar.id = `mg-${this.ns}-sidebar-${position}`;
     sidebar.classList.add("mg-sidebar", `mg-sidebar-${position}`);
     sidebar.style.width = width;
+    // Closed sidebars sit off-screen; keep them out of the tab order
+    sidebar.setAttribute("inert", "");
     if (config.backgroundColor) sidebar.style.backgroundColor = config.backgroundColor;
 
     // Close button
