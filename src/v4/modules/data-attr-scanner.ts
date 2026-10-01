@@ -76,12 +76,13 @@ export class DataAttrScanner {
       }
     }
 
-    // v3 inline iframe: class="meetergo-iframe" data-src="..."
+    // v3 inline iframe: class="meetergo-iframe" link="..." (or data-src="...")
     const iframeElements = document.querySelectorAll<HTMLElement>(
       `.${V3_IFRAME_CLASS}:not([${BOUND_ATTR}])`
     );
     for (const el of iframeElements) {
-      const link = el.getAttribute("data-src") ?? el.getAttribute("data-link") ?? "";
+      // `link` is the v3 attribute; existing embeds must keep working on v4
+      const link = el.getAttribute("data-src") ?? el.getAttribute("data-link") ?? el.getAttribute("link") ?? "";
       if (link) {
         const ns = el.getAttribute("data-meetergo-ns") ?? "default";
         el.setAttribute(BOUND_ATTR, "true");

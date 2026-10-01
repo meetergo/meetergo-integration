@@ -69,7 +69,7 @@ export class InlineEmbedManager {
   parseDOM(): void {
     const containers = document.querySelectorAll<HTMLElement>(".meetergo-iframe:not([data-mg-bound])");
     for (const container of containers) {
-      const link = container.getAttribute("data-src") ?? container.getAttribute("data-link") ?? "";
+      const link = container.getAttribute("data-src") ?? container.getAttribute("data-link") ?? container.getAttribute("link") ?? "";
       if (!link) continue;
       const align = container.getAttribute("data-align") as "left" | "center" | "right" | null;
       this.embed({ link, elementOrSelector: container, ...(align && { alignment: align }) });
