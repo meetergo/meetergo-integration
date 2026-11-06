@@ -9,6 +9,13 @@
     "meetergo"
   ],
   "browser": "./dist/esbuild/browser.js",
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": ["<rootDir>/src/**/*.test.ts"],
+    "transform": { "^.+\\.ts$": "ts-jest" },
+    "moduleNameMapper": { "^(\\.{1,2}/.*)\\.js$": "$1" },
+    "globals": { "ts-jest": { "isolatedModules": true, "tsconfig": { "importHelpers": false } } }
+  },
   "scripts": {
     "cli": "ts-node src/cli.ts",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",

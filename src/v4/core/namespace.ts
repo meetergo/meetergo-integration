@@ -42,7 +42,7 @@ import type {
   EventHandler,
   WildcardHandler,
   NamespaceHandle,
-  BookingSuccessfulData,
+  MeetergoEventName,
 } from "../types/index.js";
 
 export class MeetergoNamespace {
@@ -182,15 +182,15 @@ export class MeetergoNamespace {
   }
 
   /**
-   * Bridge a raw `booking-successful` postMessage (sent by the booking iframe)
-   * onto the typed bus, so `onSuccess`, `onBookingSuccessful` and
-   * `on("bookingSuccessful")` subscribers fire. Invoked by the SDK's global
-   * message listener; the iframe message carries no namespace, so the SDK
-   * broadcasts to every live namespace.
+   * Bridge a raw booking lifecycle postMessage (sent by the booking iframe)
+   * onto the typed bus, so `on(event)` subscribers fire, and `onSuccess` /
+   * `onBookingSuccessful` for a new booking. Invoked by the SDK's global message
+   * listener; the iframe message carries no namespace, so the SDK broadcasts
+   * to every live namespace.
    */
-  emitBookingSuccessful(data: BookingSuccessfulData): void {
+  emitBookingPageEvent(event: MeetergoEventName, data: unknown): void {
     if (this.destroyed) return;
-    this.bus.emit("bookingSuccessful", data);
+    this.bus.emit(event, data);
   }
 
   /** Live-update UI / theme for all iframes in this namespace. */

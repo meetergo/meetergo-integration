@@ -20,10 +20,17 @@ import type {
   MeetergoPrefill,
   UiConfig,
   InlineEmbedConfig,
-  BookingSuccessfulData,
+  MeetergoEventName,
 } from "../types/index.js";
 
 export const SDK_VERSION = "4.0.0";
+
+/** Messages the booking pages post to their parent → public SDK event. */
+const BOOKING_PAGE_EVENTS = new Map<string, MeetergoEventName>([
+  ["booking-successful", "bookingSuccessful"],
+  ["booking-rescheduled", "bookingRescheduled"],
+  ["booking-cancelled", "bookingCancelled"],
+]);
 
 const DEFAULT_NS = "default";
 
@@ -89,15 +96,16 @@ export class MeetergoSDK {
         return;
       }
 
-      // Booking completed inside an embedded iframe. The booking page posts
-      // { event: "booking-successful", data } to its parent; bridge it onto the
-      // typed bus so onSuccess / onBookingSuccessful subscribers fire. The
-      // message carries no namespace, so broadcast to every live namespace
-      // (mirrors the single global handler v3 used for meetergoSettings.onSuccess).
-      if (data.event === "booking-successful") {
-        const payload = (data.data ?? {}) as BookingSuccessfulData;
+      // Booking lifecycle inside an embedded iframe. The booking pages post
+      // { event, data } to their parent; bridge it onto the typed bus so
+      // subscribers fire. The message carries no namespace, so broadcast to
+      // every live namespace (mirrors the single global handler v3 used for
+      // meetergoSettings.onSuccess).
+      const lifecycleEvent = BOOKING_PAGE_EVENTS.get(data.event as string);
+      if (lifecycleEvent) {
+        const payload = data.data ?? {};
         for (const ns of this.namespaces.values()) {
-          ns.emitBookingSuccessful(payload);
+          ns.emitBookingPageEvent(lifecycleEvent, payload);
         }
         return;
       }
