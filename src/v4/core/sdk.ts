@@ -28,8 +28,8 @@ export const SDK_VERSION = "4.0.0";
 /** Messages the booking pages post to their parent → public SDK event. */
 const BOOKING_PAGE_EVENTS = new Map<string, MeetergoEventName>([
   ["booking-successful", "bookingSuccessful"],
-  ["booking-rescheduled", "bookingRescheduled"],
-  ["booking-cancelled", "bookingCancelled"],
+  ["meetergo:booking-rescheduled", "bookingRescheduled"],
+  ["meetergo:booking-cancelled", "bookingCancelled"],
 ]);
 
 const DEFAULT_NS = "default";

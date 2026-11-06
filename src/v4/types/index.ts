@@ -123,7 +123,12 @@ export interface BookingCancelledEvent
 }
 
 export interface BookingRescheduledEvent
-  extends MeetergoEventEnvelope<{ appointmentId: string; startTime: string }> {
+  extends MeetergoEventEnvelope<{
+    appointmentId: string;
+    /** Differs from `appointmentId` when a group booker moved to another appointment. */
+    previousAppointmentId: string;
+    startTime: string;
+  }> {
   event: "bookingRescheduled";
 }
 

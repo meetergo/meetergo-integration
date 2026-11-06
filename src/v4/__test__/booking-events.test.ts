@@ -18,8 +18,8 @@ function sdkWith(...namespaces: string[]) {
 
 describe("booking lifecycle events from the booking page", () => {
   it.each([
-    ["booking-rescheduled", "bookingRescheduled", { appointmentId: "a1", startTime: "2026-11-10T09:00:00.000Z" }],
-    ["booking-cancelled", "bookingCancelled", { appointmentId: "a1" }],
+    ["meetergo:booking-rescheduled", "bookingRescheduled", { appointmentId: "a2", previousAppointmentId: "a1", startTime: "2026-11-10T09:00:00.000Z" }],
+    ["meetergo:booking-cancelled", "bookingCancelled", { appointmentId: "a1" }],
     ["booking-successful", "bookingSuccessful", { appointmentId: "a1", secret: "s" }],
   ])("%s reaches %s subscribers and wildcard listeners", (message, event, data) => {
     const callable = sdkWith();
@@ -42,7 +42,7 @@ describe("booking lifecycle events from the booking page", () => {
     callable("on", { action: "bookingRescheduled", callback: sales, ns: "sales" });
     callable("on", { action: "bookingRescheduled", callback: support, ns: "support" });
 
-    postFromBookingPage("booking-rescheduled", { appointmentId: "a1", startTime: "x" });
+    postFromBookingPage("meetergo:booking-rescheduled", { appointmentId: "a1", previousAppointmentId: "a1", startTime: "x" });
 
     expect(sales).toHaveBeenCalledTimes(1);
     expect(support).toHaveBeenCalledTimes(1);
@@ -56,8 +56,8 @@ describe("booking lifecycle events from the booking page", () => {
     const bookingSuccessful = jest.fn();
     callable("on", { action: "bookingSuccessful", callback: bookingSuccessful });
 
-    postFromBookingPage("booking-rescheduled", { appointmentId: "a1", startTime: "x" });
-    postFromBookingPage("booking-cancelled", { appointmentId: "a1" });
+    postFromBookingPage("meetergo:booking-rescheduled", { appointmentId: "a1", previousAppointmentId: "a1", startTime: "x" });
+    postFromBookingPage("meetergo:booking-cancelled", { appointmentId: "a1" });
 
     expect(onSuccess).not.toHaveBeenCalled();
     expect(onBookingSuccessful).not.toHaveBeenCalled();
@@ -76,7 +76,7 @@ describe("booking lifecycle events from the booking page", () => {
     expect(onBookingSuccessful).toHaveBeenCalledWith({ appointmentId: "a1" });
   });
 
-  it.each(["constructor", "toString", "__proto__", "something-else"])(
+  it.each(["constructor", "toString", "__proto__", "something-else", "booking-cancelled", "booking-rescheduled"])(
     "ignores the unrelated message %s",
     (message) => {
       const callable = sdkWith();
@@ -109,7 +109,7 @@ describe("the documented event list", () => {
   // Types and README rows once promised events nothing could ever send.
   it.each(declared)("%s has code that sends it", (event) => {
     const emittedDirectly = source.includes(`.emit("${event}"`);
-    const bridgedFromPage = new RegExp(`\\["[\\w-]+", "${event}"\\]`).test(source);
+    const bridgedFromPage = new RegExp(`\\["[\\w:-]+", "${event}"\\]`).test(source);
     expect(emittedDirectly || bridgedFromPage).toBe(true);
   });
 
