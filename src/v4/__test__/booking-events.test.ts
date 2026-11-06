@@ -98,7 +98,10 @@ describe("the documented event list", () => {
       return path.endsWith(".ts") ? [path] : [];
     });
   const v4 = join(__dirname, "..");
-  const source = sourceFiles(v4).map((file) => readFileSync(file, "utf8")).join("\n");
+  const source = sourceFiles(v4)
+    .map((file) => readFileSync(file, "utf8"))
+    .join("\n")
+    .replace(/\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm, "");
   const declared = [...readFileSync(join(v4, "types/index.ts"), "utf8").matchAll(/^\s+event: "(\w+)";$/gm)].map((m) => m[1]);
   const readme = readFileSync(join(v4, "../../README.md"), "utf8");
 

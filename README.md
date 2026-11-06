@@ -215,6 +215,8 @@ Available events:
 | `videoExpanded` | Video widget expanded |
 | `videoMinimized` | Video widget minimized |
 
+Booking events (`bookingSuccessful`, `bookingRescheduled`, `bookingCancelled`) reach every namespace on the page, because the booking page's message names none.
+
 > **Browser events only reach a page that frames the booking page.** Reschedule and cancellation links from emails open as their own page, so `bookingRescheduled` and `bookingCancelled` cannot fire there. To follow every change to a booking, wherever it happens, use the `booking_rescheduled` and `booking_cancelled` webhooks.
 
 Convenience callbacks in `init` config:
