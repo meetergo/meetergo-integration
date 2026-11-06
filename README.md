@@ -200,9 +200,9 @@ Available events:
 |---|---|
 | `linkReady` | Iframe loaded successfully |
 | `linkFailed` | Iframe failed to load (timeout or error) |
-| `bookingSuccessful` | A booking was completed |
-| `bookingCancelled` | A booking was cancelled |
-| `bookingRescheduled` | A booking was rescheduled |
+| `bookingSuccessful` | A booking was completed. It may still need double opt-in or host confirmation (see `bookingType`) |
+| `bookingCancelled` | The booker cancelled on a cancellation page framed in your site. Data: `{ appointmentId }`, one event per cancelled date. On a group meeting it means this booker gave up their seat, and the meeting may continue for others |
+| `bookingRescheduled` | The booker rescheduled on a reschedule page framed in your site. Data: `{ appointmentId, previousAppointmentId, startTime }`. The ids differ when a group booker moved to another appointment |
 | `modalOpened` | Modal opened |
 | `modalClosed` | Modal closed |
 | `bookerViewed` | Booking page scrolled into view (inline) |
@@ -213,6 +213,11 @@ Available events:
 | `videoPlay` | Video started playing |
 | `videoPause` | Video paused |
 | `videoExpanded` | Video widget expanded |
+| `videoMinimized` | Video widget minimized |
+
+Booking events (`bookingSuccessful`, `bookingRescheduled`, `bookingCancelled`) reach every namespace on the page, because the booking page's message names none.
+
+> **Browser events only reach a page that frames the booking page.** Reschedule and cancellation links from emails open as their own page, so `bookingRescheduled` and `bookingCancelled` cannot fire there. To follow every change to a booking, wherever it happens, use the `booking_rescheduled` and `booking_cancelled` webhooks.
 
 Convenience callbacks in `init` config:
 

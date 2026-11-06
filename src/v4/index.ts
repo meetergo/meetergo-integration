@@ -78,7 +78,6 @@ export type {
   VideoExpandedEvent,
   VideoMinimizedEvent,
   BookerViewedEvent,
-  RoutedEvent,
 
   // Component configs
   FloatingButtonConfig,

@@ -46,13 +46,18 @@ export interface BookingSuccessfulData {
   attendeeEmail?: string;
   bookingType?: "doubleOptIn" | "requireHostConfirmation";
   provisionalBookingId?: string;
-  title?: string;
-  startTime?: string;
-  endTime?: string;
-  eventTypeId?: string;
-  status?: string;
-  uid?: string;
-  videoCallUrl?: string;
+  redirectUrl?: string;
+  recurringSeriesId?: string;
+  recurringOccurrences?: number;
+  appointmentIds?: string[];
+  bundleId?: string;
+  isBundleBooking?: boolean;
+  /**
+   * Unless the meeting type turns off passing event details: `event_type_name`,
+   * `event_type_uuid`, `event_start_time`, `event_end_time`, `assigned_to`,
+   * `invitee_*` and one `answer_<n>` per form answer.
+   */
+  [eventDetail: string]: unknown;
 }
 
 // ─── Theme / CSS Variables ───────────────────────────────────────────────────
@@ -113,11 +118,17 @@ export interface BookingSuccessfulEvent extends MeetergoEventEnvelope<BookingSuc
 }
 
 export interface BookingCancelledEvent
-  extends MeetergoEventEnvelope<{ appointmentId?: string }> {
+  extends MeetergoEventEnvelope<{ appointmentId: string }> {
   event: "bookingCancelled";
 }
 
-export interface BookingRescheduledEvent extends MeetergoEventEnvelope<BookingSuccessfulData> {
+export interface BookingRescheduledEvent
+  extends MeetergoEventEnvelope<{
+    appointmentId: string;
+    /** Differs from `appointmentId` when a group booker moved to another appointment. */
+    previousAppointmentId: string;
+    startTime: string;
+  }> {
   event: "bookingRescheduled";
 }
 
@@ -166,14 +177,6 @@ export interface BookerReloadedEvent extends MeetergoEventEnvelope<{ link: strin
   event: "bookerReloaded";
 }
 
-export interface RoutedEvent
-  extends MeetergoEventEnvelope<{
-    actionType: "customPageMessage" | "externalRedirectUrl" | "eventTypeRedirectUrl";
-    actionValue: string;
-  }> {
-  event: "routed";
-}
-
 /** Union of all strongly-typed events */
 export type MeetergoEvent =
   | LinkReadyEvent
@@ -191,8 +194,7 @@ export type MeetergoEvent =
   | VideoMinimizedEvent
   | BookerViewedEvent
   | BookerReopenedEvent
-  | BookerReloadedEvent
-  | RoutedEvent;
+  | BookerReloadedEvent;
 
 export type MeetergoEventName = MeetergoEvent["event"];
 
