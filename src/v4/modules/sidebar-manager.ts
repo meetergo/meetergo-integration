@@ -21,7 +21,7 @@ export class SidebarManager {
   private readonly iframeOptions: NamespaceIframeOptions;
   private activeSidebars: Map<SidebarPosition, { sidebar: HTMLElement; toggle: HTMLElement; abort: AbortController }> = new Map();
 
-  constructor(ns: string, bus: EventBus, iframeOptions: NamespaceIframeOptions = {}) {
+  constructor(ns: string, bus: EventBus, iframeOptions: NamespaceIframeOptions = { forwardQueryParams: false }) {
     this.ns = ns;
     this.bus = bus;
     this.iframeOptions = iframeOptions;

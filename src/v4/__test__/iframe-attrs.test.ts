@@ -90,6 +90,26 @@ describe("iframeAttrs and uiDebug from init", () => {
     expect(iframe?.getAttribute("loading")).toBe("lazy");
   });
 
+  it("ignore sandbox and srcdoc, and add to allow instead of replacing it", () => {
+    document.body.innerHTML = `<div id="booking"></div>`;
+    const { callable } = sdkWith({
+      ns: "unsafe",
+      iframeAttrs: { sandbox: "allow-scripts allow-same-origin", srcdoc: "<p>x</p>", allow: "camera" },
+      sidebar: { link: LINK },
+    });
+
+    callable("inline", { ns: "unsafe", link: LINK, elementOrSelector: "#booking" });
+
+    for (const iframe of [
+      document.querySelector<HTMLIFrameElement>("#booking iframe"),
+      document.querySelector<HTMLIFrameElement>(".mg-sidebar-iframe"),
+    ]) {
+      expect(iframe?.hasAttribute("sandbox")).toBe(false);
+      expect(iframe?.hasAttribute("srcdoc")).toBe(false);
+      expect(iframe?.getAttribute("allow")).toBe("payment; camera");
+    }
+  });
+
   it("leave iframes untouched when not configured", () => {
     document.body.innerHTML = `<div id="booking"></div>`;
     const { callable } = sdkWith({ ns: "plain" });

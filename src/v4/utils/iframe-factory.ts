@@ -58,12 +58,19 @@ export function bookingSrc(link: string, options: NamespaceIframeOptions, extraP
   return buildIframeURL(link, collectIframeParams({ prefill, extraParams, forwardQueryParams }));
 }
 
-/** Attributes the SDK needs to size, name, load and prerender its iframes; iframeAttrs cannot replace them */
-const SDK_OWNED_ATTRS = new Set(["src", "name", "class", "style", "loading"]);
+/**
+ * Attributes the SDK needs to load, size and prerender the booking page, or that
+ * would break redirects and payments after a booking; iframeAttrs cannot set them
+ */
+const SDK_OWNED_ATTRS = new Set(["src", "srcdoc", "name", "class", "style", "loading", "sandbox"]);
 
 export function decorateIframe(iframe: HTMLIFrameElement, { uiDebug, iframeAttrs }: IframeDecoration): void {
   for (const [key, value] of Object.entries(iframeAttrs ?? {})) {
-    if (!SDK_OWNED_ATTRS.has(key.toLowerCase())) iframe.setAttribute(key, value);
+    const name = key.toLowerCase();
+    if (SDK_OWNED_ATTRS.has(name)) continue;
+    // Extra permissions add to the SDK's own (payment), never replace them
+    const base = name === "allow" ? iframe.getAttribute("allow") : null;
+    iframe.setAttribute(key, base ? `${base}; ${value}` : value);
   }
 
   if (uiDebug) {

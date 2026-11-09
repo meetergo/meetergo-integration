@@ -37,7 +37,7 @@ export class PrerenderManager {
   private readonly ns: string;
   private readonly iframeOptions: NamespaceIframeOptions;
 
-  constructor(ns: string, config: PrerenderConfig = {}, iframeOptions: NamespaceIframeOptions = {}) {
+  constructor(ns: string, config: PrerenderConfig = {}, iframeOptions: NamespaceIframeOptions = { forwardQueryParams: false }) {
     this.ns = ns;
     this.iframeOptions = iframeOptions;
     this.slotStaleTTL = config.slotStaleTTL ?? DEFAULT_SLOT_STALE_TTL;
@@ -75,7 +75,8 @@ export class PrerenderManager {
     const existing = this.entries.get(key);
     const builtURL = bookingSrc(link, this.iframeOptions, extraParams);
 
-    if (existing && !existing.isAcquired && !this.isFullStale(existing) && existing.builtURL === builtURL) {
+    if (existing && !existing.isAcquired && !this.isFullStale(existing)) {
+      this.retarget(existing, builtURL);
       return; // still fresh
     }
 
@@ -105,15 +106,18 @@ export class PrerenderManager {
 
     if (!entry || entry.isAcquired) return null;
 
-    // If full stale, or prefill / page params changed since warm-up, evict and
-    // return null (caller will create fresh)
-    if (this.isFullStale(entry) || entry.builtURL !== bookingSrc(link, this.iframeOptions, extraParams)) {
+    // If full stale, evict and return null (caller will create fresh)
+    if (this.isFullStale(entry)) {
       this.evict(key);
       return null;
     }
 
+    // Prefill or page params changed since warm-up: reload with the current URL
+    // in the background, like a slot-stale reload
+    const retargeted = this.retarget(entry, bookingSrc(link, this.iframeOptions, extraParams));
+
     // If only slot-stale, reload src in the background then return the iframe
-    if (this.isSlotStale(entry)) {
+    if (!retargeted && this.isSlotStale(entry)) {
       entry.iframe.src = entry.builtURL; // triggers background reload
       entry.createdAt = Date.now();
     }
@@ -186,6 +190,15 @@ export class PrerenderManager {
     });
     decorateIframe(iframe, this.iframeOptions);
     return iframe;
+  }
+
+  /** Point an entry at a new URL; returns whether it had to reload */
+  private retarget(entry: PrerenderEntry, builtURL: string): boolean {
+    if (entry.builtURL === builtURL) return false;
+    entry.builtURL = builtURL;
+    entry.iframe.src = builtURL;
+    entry.createdAt = Date.now();
+    return true;
   }
 
   private evict(key: string): void {

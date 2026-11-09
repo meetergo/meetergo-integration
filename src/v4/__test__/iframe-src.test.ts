@@ -1,4 +1,5 @@
 import { MeetergoSDK } from "../core/sdk";
+import { PrerenderManager } from "../core/prerender";
 
 const LINK = "https://cal.meetergo.com/team/analyse";
 
@@ -62,19 +63,29 @@ describe("prerendered modal src", () => {
     expect(parked("noforward")[0].src).toBe(`${LINK}?embed=true`);
   });
 
-  it("is not reused once setPrefill changed the prefill after warm-up", () => {
+  it("stays prerendered but loads the new prefill when setPrefill ran after warm-up", () => {
     const callable = sdkWith({ ns: "late", floatingButton: { link: LINK } });
-    const stale = parked("late")[0];
+    const prerendered = parked("late")[0];
 
     callable("setPrefill", { ns: "late", email: "late@b.de" });
     callable("openModal", { ns: "late", link: LINK });
 
     expect(modalSrc()).toContain("email=late%40b.de");
-    expect(document.querySelector('iframe[name="meetergo-embedded-modal"]')).not.toBe(stale);
-    expect(stale.isConnected).toBe(false);
+    expect(document.querySelector('iframe[name="meetergo-embedded-modal"]')).toBe(prerendered);
   });
 
-  it("re-warms instead of keeping a parked iframe with outdated params", () => {
+  it("stays prerendered but follows the page URL when it changed after warm-up", () => {
+    const callable = sdkWith({ ns: "spa", floatingButton: { link: LINK } });
+    const prerendered = parked("spa")[0];
+
+    window.history.replaceState({}, "", "/next-route?utm_source=newsletter");
+    callable("openModal", { ns: "spa", link: LINK });
+
+    expect(modalSrc()).toBe(`${LINK}?utm_source=newsletter&embed=true`);
+    expect(document.querySelector('iframe[name="meetergo-embedded-modal"]')).toBe(prerendered);
+  });
+
+  it("keeps one parked iframe per link and updates its params on a new warm-up", () => {
     const callable = sdkWith({ ns: "rewarm", floatingButton: { link: LINK } });
     callable("setPrefill", { ns: "rewarm", email: "x@b.de" });
     callable("prerender", { ns: "rewarm", link: LINK });
@@ -104,5 +115,14 @@ describe("sidebar src", () => {
     expect(sidebarIframe()?.src).toBe(`${LINK}?embed=true`);
     expect(sidebarIframe()?.hasAttribute("loading")).toBe(false);
     expect(sidebarIframe()?.getAttribute("style")).toBeNull();
+  });
+});
+
+describe("standalone managers keep their old URLs", () => {
+  it("PrerenderManager without namespace options forwards no page params", () => {
+    const manager = new PrerenderManager("standalone");
+    manager.warmUp(LINK);
+
+    expect(parked("standalone")[0].src).toBe(`${LINK}?embed=true`);
   });
 });
