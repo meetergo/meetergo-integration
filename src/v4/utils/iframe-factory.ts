@@ -49,13 +49,16 @@ export interface IframeFactoryResult {
 /** Namespace options every SDK iframe gets, whichever module creates it */
 export type IframeDecoration = Pick<IframeFactoryOptions, "uiDebug" | "iframeAttrs">;
 
+/** Attributes the SDK needs to size, name, load and prerender its iframes; iframeAttrs cannot replace them */
+const SDK_OWNED_ATTRS = new Set(["src", "name", "class", "style", "loading"]);
+
 export function decorateIframe(iframe: HTMLIFrameElement, { uiDebug, iframeAttrs }: IframeDecoration): void {
-  if (uiDebug) {
-    iframe.style.outline = "2px solid #22c55e";
+  for (const [key, value] of Object.entries(iframeAttrs ?? {})) {
+    if (!SDK_OWNED_ATTRS.has(key.toLowerCase())) iframe.setAttribute(key, value);
   }
 
-  for (const [key, value] of Object.entries(iframeAttrs ?? {})) {
-    iframe.setAttribute(key, value);
+  if (uiDebug) {
+    iframe.style.outline = "2px solid #22c55e";
   }
 }
 

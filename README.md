@@ -266,7 +266,7 @@ meetergo('init', {
 });
 ```
 
-Attributes you pass win over the SDK's defaults. Avoid `sandbox`: it blocks the redirect and payment popups after a booking unless you allow them.
+`src`, `name`, `class`, `style` and `loading` stay under the SDK's control and are ignored here. Avoid `sandbox`: it blocks the redirect and payment popups after a booking unless you allow them.
 
 ---
 

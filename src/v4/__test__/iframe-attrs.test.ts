@@ -55,7 +55,12 @@ describe("iframeAttrs and uiDebug from init", () => {
     const { callable } = sdkWith({ ns: "warm", iframeAttrs: ATTRS, uiDebug: true });
 
     callable("prerender", { ns: "warm", link: LINK });
+    const parked = document.querySelector<HTMLIFrameElement>("#mg-prerender-parking-warm iframe");
+    expectDecorated(parked);
+
     callable("openModal", { ns: "warm", link: LINK });
+
+    expect(document.querySelector('iframe[name="meetergo-embedded-modal"]')).toBe(parked);
 
     expectDecorated(document.querySelector<HTMLIFrameElement>('iframe[name="meetergo-embedded-modal"]'));
   });
@@ -64,6 +69,25 @@ describe("iframeAttrs and uiDebug from init", () => {
     sdkWith({ ns: "side", iframeAttrs: ATTRS, uiDebug: true, sidebar: { link: LINK } });
 
     expectDecorated(document.querySelector<HTMLIFrameElement>(".mg-sidebar-iframe"));
+  });
+
+  it("cannot replace the attributes the SDK sizes, names and loads iframes with", () => {
+    document.body.innerHTML = `<div id="booking"></div>`;
+    const { callable } = sdkWith({
+      ns: "owned",
+      uiDebug: true,
+      iframeAttrs: { ...ATTRS, src: "https://example.com", name: "x", class: "x", style: "height:1px", loading: "eager" },
+    });
+
+    callable("inline", { ns: "owned", link: LINK, elementOrSelector: "#booking" });
+
+    const iframe = document.querySelector<HTMLIFrameElement>("#booking iframe");
+    expectDecorated(iframe);
+    expect(iframe?.src.startsWith(LINK)).toBe(true);
+    expect(iframe?.name).not.toBe("x");
+    expect(iframe?.getAttribute("class")).not.toBe("x");
+    expect(iframe?.style.height).toBe("700px");
+    expect(iframe?.getAttribute("loading")).toBe("lazy");
   });
 
   it("leave iframes untouched when not configured", () => {
