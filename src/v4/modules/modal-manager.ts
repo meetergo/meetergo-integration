@@ -107,6 +107,8 @@ export class ModalManager {
         forwardQueryParams: this.config.forwardQueryParams,
         origin: this.config.origin ?? "*",
         height: "700px",
+        uiDebug: this.config.uiDebug,
+        iframeAttrs: this.config.iframeAttrs,
       });
       iframe = result.iframe;
       colorSchemeHandle = result.colorSchemeHandle;

@@ -46,6 +46,19 @@ export interface IframeFactoryResult {
   colorSchemeHandle: ColorSchemeSyncHandle | null;
 }
 
+/** Namespace options every SDK iframe gets, whichever module creates it */
+export type IframeDecoration = Pick<IframeFactoryOptions, "uiDebug" | "iframeAttrs">;
+
+export function decorateIframe(iframe: HTMLIFrameElement, { uiDebug, iframeAttrs }: IframeDecoration): void {
+  if (uiDebug) {
+    iframe.style.outline = "2px solid #22c55e";
+  }
+
+  for (const [key, value] of Object.entries(iframeAttrs ?? {})) {
+    iframe.setAttribute(key, value);
+  }
+}
+
 export function createIframe(options: IframeFactoryOptions): IframeFactoryResult {
   const {
     link,
@@ -81,15 +94,7 @@ export function createIframe(options: IframeFactoryOptions): IframeFactoryResult
     overflow: "hidden",
   });
 
-  if (uiDebug) {
-    iframe.style.outline = "2px solid #22c55e";
-  }
-
-  if (iframeAttrs) {
-    for (const [key, value] of Object.entries(iframeAttrs)) {
-      iframe.setAttribute(key, value);
-    }
-  }
+  decorateIframe(iframe, { uiDebug, iframeAttrs });
 
   let colorSchemeHandle: ColorSchemeSyncHandle | null = null;
   if (!skipColorSchemeSync) {

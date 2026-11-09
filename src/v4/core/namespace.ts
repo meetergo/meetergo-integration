@@ -69,12 +69,12 @@ export class MeetergoNamespace {
     // Prerender manager (disabled if config.prerender === false)
     this.prerender =
       config.prerender !== false
-        ? new PrerenderManager(id, typeof config.prerender === "object" ? config.prerender : {})
+        ? new PrerenderManager(id, typeof config.prerender === "object" ? config.prerender : {}, this.config)
         : null;
 
     // Modules
     this.modal = new ModalManager(id, this.bus, this.config, this.prerender);
-    this.sidebar = new SidebarManager(id, this.bus);
+    this.sidebar = new SidebarManager(id, this.bus, this.config);
     this.video = new VideoEmbedManager(id, this.bus, (link) => this.modal.openWithLink(link));
     this.floatingBtn = new FloatingButton(id, (link) => this.modal.openWithLink(link));
     this.formListener = new FormListenerManager(id, (link, prefill) =>

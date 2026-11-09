@@ -258,13 +258,15 @@ meetergo('init', {
 });
 ```
 
-Custom attributes on every iframe (e.g. for CSP or analytics):
+Custom attributes on every iframe the SDK creates (inline, modal, prerendered modal, sidebar), e.g. for analytics or a referrer policy:
 
 ```js
 meetergo('init', {
-  iframeAttrs: { 'data-analytics': 'booking', sandbox: 'allow-scripts allow-same-origin' }
+  iframeAttrs: { 'data-analytics': 'booking', referrerpolicy: 'strict-origin-when-cross-origin' }
 });
 ```
+
+Attributes you pass win over the SDK's defaults. Avoid `sandbox`: it blocks the redirect and payment popups after a booking unless you allow them.
 
 ---
 

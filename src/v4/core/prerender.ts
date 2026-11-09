@@ -15,6 +15,8 @@
 
 import type { PrerenderConfig } from "../types/index.js";
 import { buildIframeURL } from "../utils/url-params.js";
+import { decorateIframe } from "../utils/iframe-factory.js";
+import type { IframeDecoration } from "../utils/iframe-factory.js";
 
 const DEFAULT_SLOT_STALE_TTL = 60_000;       // 1 minute
 const DEFAULT_FULL_RELOAD_TTL = 900_000;     // 15 minutes
@@ -34,9 +36,11 @@ export class PrerenderManager {
   private slotStaleTTL: number;
   private fullReloadTTL: number;
   private readonly ns: string;
+  private readonly decoration: IframeDecoration;
 
-  constructor(ns: string, config: PrerenderConfig = {}) {
+  constructor(ns: string, config: PrerenderConfig = {}, decoration: IframeDecoration = {}) {
     this.ns = ns;
+    this.decoration = decoration;
     this.slotStaleTTL = config.slotStaleTTL ?? DEFAULT_SLOT_STALE_TTL;
     this.fullReloadTTL = config.fullReloadTTL ?? DEFAULT_FULL_RELOAD_TTL;
 
@@ -180,6 +184,7 @@ export class PrerenderManager {
       border: "none",
       visibility: "hidden",
     });
+    decorateIframe(iframe, this.decoration);
     return iframe;
   }
 
