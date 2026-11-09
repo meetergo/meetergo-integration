@@ -199,6 +199,10 @@ export class MeetergoNamespace {
     this.applyUiConfig(config);
   }
 
+  get debug(): boolean {
+    return this.config.debug === true;
+  }
+
   setPrefill(data: MeetergoPrefill): void {
     this.assertAlive();
     this.config.prefill = { ...this.config.prefill, ...data };

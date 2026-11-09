@@ -49,6 +49,15 @@ export interface IframeFactoryResult {
 /** Namespace options every SDK iframe gets, whichever module creates it */
 export type IframeDecoration = Pick<IframeFactoryOptions, "uiDebug" | "iframeAttrs">;
 
+/** Namespace options read live by modules that build their own iframes */
+export type NamespaceIframeOptions = IframeDecoration & Pick<IframeFactoryOptions, "prefill" | "forwardQueryParams">;
+
+/** The src every SDK iframe for this link gets: prefill, call-site params and forwarded page params */
+export function bookingSrc(link: string, options: NamespaceIframeOptions, extraParams?: Record<string, string>): string {
+  const { prefill, forwardQueryParams } = options;
+  return buildIframeURL(link, collectIframeParams({ prefill, extraParams, forwardQueryParams }));
+}
+
 /** Attributes the SDK needs to size, name, load and prerender its iframes; iframeAttrs cannot replace them */
 const SDK_OWNED_ATTRS = new Set(["src", "name", "class", "style", "loading"]);
 
@@ -78,8 +87,7 @@ export function createIframe(options: IframeFactoryOptions): IframeFactoryResult
     iframeAttrs,
   } = options;
 
-  const params = collectIframeParams({ prefill, extraParams, forwardQueryParams });
-  const src = buildIframeURL(link, params);
+  const src = bookingSrc(link, { prefill, forwardQueryParams }, extraParams);
 
   const iframe = document.createElement("iframe");
   iframe.src = src;

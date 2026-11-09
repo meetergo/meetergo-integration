@@ -14,9 +14,8 @@
  */
 
 import type { PrerenderConfig } from "../types/index.js";
-import { buildIframeURL } from "../utils/url-params.js";
-import { decorateIframe } from "../utils/iframe-factory.js";
-import type { IframeDecoration } from "../utils/iframe-factory.js";
+import { bookingSrc, decorateIframe } from "../utils/iframe-factory.js";
+import type { NamespaceIframeOptions } from "../utils/iframe-factory.js";
 
 const DEFAULT_SLOT_STALE_TTL = 60_000;       // 1 minute
 const DEFAULT_FULL_RELOAD_TTL = 900_000;     // 15 minutes
@@ -36,11 +35,11 @@ export class PrerenderManager {
   private slotStaleTTL: number;
   private fullReloadTTL: number;
   private readonly ns: string;
-  private readonly decoration: IframeDecoration;
+  private readonly iframeOptions: NamespaceIframeOptions;
 
-  constructor(ns: string, config: PrerenderConfig = {}, decoration: IframeDecoration = {}) {
+  constructor(ns: string, config: PrerenderConfig = {}, iframeOptions: NamespaceIframeOptions = {}) {
     this.ns = ns;
-    this.decoration = decoration;
+    this.iframeOptions = iframeOptions;
     this.slotStaleTTL = config.slotStaleTTL ?? DEFAULT_SLOT_STALE_TTL;
     this.fullReloadTTL = config.fullReloadTTL ?? DEFAULT_FULL_RELOAD_TTL;
 
@@ -74,15 +73,15 @@ export class PrerenderManager {
   ): void {
     const key = this.cacheKey(link, extraParams);
     const existing = this.entries.get(key);
+    const builtURL = bookingSrc(link, this.iframeOptions, extraParams);
 
-    if (existing && !existing.isAcquired && !this.isFullStale(existing)) {
+    if (existing && !existing.isAcquired && !this.isFullStale(existing) && existing.builtURL === builtURL) {
       return; // still fresh
     }
 
     // Remove stale entry
     if (existing) this.evict(key);
 
-    const builtURL = buildIframeURL(link, { ...extraParams, embed: "true" });
     const iframe = this.createHiddenIframe(builtURL, origin);
     this.parkingContainer.appendChild(iframe);
 
@@ -106,8 +105,9 @@ export class PrerenderManager {
 
     if (!entry || entry.isAcquired) return null;
 
-    // If full stale, evict and return null (caller will create fresh)
-    if (this.isFullStale(entry)) {
+    // If full stale, or prefill / page params changed since warm-up, evict and
+    // return null (caller will create fresh)
+    if (this.isFullStale(entry) || entry.builtURL !== bookingSrc(link, this.iframeOptions, extraParams)) {
       this.evict(key);
       return null;
     }
@@ -184,7 +184,7 @@ export class PrerenderManager {
       border: "none",
       visibility: "hidden",
     });
-    decorateIframe(iframe, this.decoration);
+    decorateIframe(iframe, this.iframeOptions);
     return iframe;
   }
 
