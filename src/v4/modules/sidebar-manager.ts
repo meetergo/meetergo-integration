@@ -10,18 +10,21 @@
 
 import { errorHandler } from "../utils/error-handler.js";
 import { setIcon } from "../utils/icons.js";
-import { buildIframeURL } from "../utils/url-params.js";
+import { bookingSrc, decorateIframe } from "../utils/iframe-factory.js";
+import type { NamespaceIframeOptions } from "../utils/iframe-factory.js";
 import type { EventBus } from "../core/event-bus.js";
 import type { SidebarConfig, SidebarPosition, Position } from "../types/index.js";
 
 export class SidebarManager {
   private readonly ns: string;
   private readonly bus: EventBus;
+  private readonly iframeOptions: NamespaceIframeOptions;
   private activeSidebars: Map<SidebarPosition, { sidebar: HTMLElement; toggle: HTMLElement; abort: AbortController }> = new Map();
 
-  constructor(ns: string, bus: EventBus) {
+  constructor(ns: string, bus: EventBus, iframeOptions: NamespaceIframeOptions = { forwardQueryParams: false }) {
     this.ns = ns;
     this.bus = bus;
+    this.iframeOptions = iframeOptions;
   }
 
   create(config: SidebarConfig): void {
@@ -147,8 +150,10 @@ export class SidebarManager {
     // Iframe
     const iframe = document.createElement("iframe");
     iframe.className = "mg-sidebar-iframe";
-    iframe.src = buildIframeURL(config.link, {});
+    iframe.src = bookingSrc(config.link, this.iframeOptions);
     iframe.title = "Meetergo booking sidebar";
+    iframe.setAttribute("allow", "payment");
+    decorateIframe(iframe, this.iframeOptions);
 
     sidebar.append(closeBtn, iframe);
 

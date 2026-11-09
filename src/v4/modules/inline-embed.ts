@@ -119,6 +119,8 @@ export class InlineEmbedManager {
       forwardQueryParams: this.config.forwardQueryParams,
       origin: this.config.origin ?? "*",
       height: `${this.config.iframeHeight ?? 700}px`,
+      uiDebug: this.config.uiDebug,
+      iframeAttrs: this.config.iframeAttrs,
     });
 
     // Show spinner while loading

@@ -46,6 +46,38 @@ export interface IframeFactoryResult {
   colorSchemeHandle: ColorSchemeSyncHandle | null;
 }
 
+/** Namespace options every SDK iframe gets, whichever module creates it */
+export type IframeDecoration = Pick<IframeFactoryOptions, "uiDebug" | "iframeAttrs">;
+
+/** Namespace options read live by modules that build their own iframes */
+export type NamespaceIframeOptions = IframeDecoration & Pick<IframeFactoryOptions, "prefill" | "forwardQueryParams">;
+
+/** The src every SDK iframe for this link gets: prefill, call-site params and forwarded page params */
+export function bookingSrc(link: string, options: NamespaceIframeOptions, extraParams?: Record<string, string>): string {
+  const { prefill, forwardQueryParams } = options;
+  return buildIframeURL(link, collectIframeParams({ prefill, extraParams, forwardQueryParams }));
+}
+
+/**
+ * Attributes the SDK needs to load, size and prerender the booking page, or that
+ * would break redirects and payments after a booking; iframeAttrs cannot set them
+ */
+const SDK_OWNED_ATTRS = new Set(["src", "srcdoc", "name", "class", "style", "loading", "sandbox"]);
+
+export function decorateIframe(iframe: HTMLIFrameElement, { uiDebug, iframeAttrs }: IframeDecoration): void {
+  for (const [key, value] of Object.entries(iframeAttrs ?? {})) {
+    const name = key.toLowerCase();
+    if (SDK_OWNED_ATTRS.has(name)) continue;
+    // Extra permissions add to the SDK's own (payment), never replace them
+    const base = name === "allow" ? iframe.getAttribute("allow") : null;
+    iframe.setAttribute(key, base ? `${base}; ${value}` : value);
+  }
+
+  if (uiDebug) {
+    iframe.style.outline = "2px solid #22c55e";
+  }
+}
+
 export function createIframe(options: IframeFactoryOptions): IframeFactoryResult {
   const {
     link,
@@ -62,8 +94,7 @@ export function createIframe(options: IframeFactoryOptions): IframeFactoryResult
     iframeAttrs,
   } = options;
 
-  const params = collectIframeParams({ prefill, extraParams, forwardQueryParams });
-  const src = buildIframeURL(link, params);
+  const src = bookingSrc(link, { prefill, forwardQueryParams }, extraParams);
 
   const iframe = document.createElement("iframe");
   iframe.src = src;
@@ -81,15 +112,7 @@ export function createIframe(options: IframeFactoryOptions): IframeFactoryResult
     overflow: "hidden",
   });
 
-  if (uiDebug) {
-    iframe.style.outline = "2px solid #22c55e";
-  }
-
-  if (iframeAttrs) {
-    for (const [key, value] of Object.entries(iframeAttrs)) {
-      iframe.setAttribute(key, value);
-    }
-  }
+  decorateIframe(iframe, { uiDebug, iframeAttrs });
 
   let colorSchemeHandle: ColorSchemeSyncHandle | null = null;
   if (!skipColorSchemeSync) {

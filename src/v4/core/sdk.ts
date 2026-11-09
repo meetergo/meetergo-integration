@@ -34,6 +34,9 @@ const BOOKING_PAGE_EVENTS = new Map<string, MeetergoEventName>([
 
 const DEFAULT_NS = "default";
 
+// Held by reference so the production build, which strips console calls, keeps opt-in debug output
+const debugConsole = console;
+
 export class MeetergoSDK {
   private namespaces: Map<string, MeetergoNamespace> = new Map();
   scanner: DataAttrScanner;
@@ -179,6 +182,7 @@ export class MeetergoSDK {
   // ── Dispatch ──────────────────────────────────────────────────────────────
 
   private dispatch(method: string, args: unknown[]): void {
+    this.logCall(method, args);
     switch (method) {
       case "init": {
         const config = (args[0] ?? {}) as NamespaceConfig;
@@ -284,6 +288,14 @@ export class MeetergoSDK {
     const ns = new MeetergoNamespace(id, config);
     this.namespaces.set(id, ns);
     return ns;
+  }
+
+  /** `debug: true` on a namespace logs every SDK call made for it */
+  private logCall(method: string, args: unknown[]): void {
+    const opts = (args[0] ?? {}) as { ns?: string; debug?: boolean };
+    const id = opts.ns ?? DEFAULT_NS;
+    const enabled = method === "init" ? opts.debug === true : this.namespaces.get(id)?.debug === true;
+    if (enabled) debugConsole.debug(`[Meetergo:${id}]`, method, ...args);
   }
 
   private getOrCreate(id: string): MeetergoNamespace {
