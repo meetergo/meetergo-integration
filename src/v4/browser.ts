@@ -7,6 +7,14 @@
  */
 
 import { MeetergoSDK } from "./core/sdk.js";
+import { captureScriptDesign } from "./design/resolve.js";
+import { captureScriptBase } from "./design/loader.js";
+
+// <script data-meetergo-design="2026" src=".../integration.js"> — only readable while this script evaluates
+if (typeof document !== "undefined") {
+  captureScriptDesign(document.currentScript);
+  captureScriptBase(document.currentScript);
+}
 
 function initSDK() {
   if (typeof window === "undefined") return;

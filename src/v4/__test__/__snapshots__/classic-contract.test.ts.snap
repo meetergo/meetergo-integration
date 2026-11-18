@@ -1,0 +1,336 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`classic design contract (default, no design flag) data attribute buttons open the classic modal 1`] = `21`;
+
+exports[`classic design contract (default, no design flag) floating button DOM, ids, classes and inline styles 1`] = `"<div id=\\"mg-prerender-parking-fb\\" style=\\"position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; top: -9999px; left: -9999px; z-index: -1;\\"><iframe src=\\"https://cal.meetergo.com/lena/erstberatung?embed=true\\" name=\\"mg-prerender-fb-4fzzzx\\" allow=\\"payment\\" style=\\"width: 900px; height: 700px; visibility: hidden;\\"></iframe></div><button id=\\"mg-fb-float-btn\\" class=\\"mg-float-button mg-anim-pulse\\" type=\\"button\\" aria-label=\\"Termin buchen\\" style=\\"background-color: rgb(15, 123, 95); color: rgb(255, 255, 255); position: fixed; z-index: 999; bottom: 16px; right: 16px;\\"><span aria-hidden=\\"true\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><rect width=\\"18\\" height=\\"18\\" x=\\"3\\" y=\\"4\\" rx=\\"2\\" ry=\\"2\\"></rect><line x1=\\"16\\" x2=\\"16\\" y1=\\"2\\" y2=\\"6\\"></line><line x1=\\"8\\" x2=\\"8\\" y1=\\"2\\" y2=\\"6\\"></line><line x1=\\"3\\" x2=\\"21\\" y1=\\"10\\" y2=\\"10\\"></line></svg></span><span>Termin buchen</span></button>"`;
+
+exports[`classic design contract (default, no design flag) floating button DOM, ids, classes and inline styles 2`] = `
+Array [
+  "mg-v4-video",
+  "mg-v4-button",
+  "mg-v4-sidebar",
+  "mg-v4-animations",
+  "mg-v4-base",
+]
+`;
+
+exports[`classic design contract (default, no design flag) floating button click opens the classic modal with today's DOM and events 1`] = `"<div id=\\"mg-fbm-modal\\" role=\\"dialog\\" aria-modal=\\"true\\" aria-labelledby=\\"mg-fbm-modal-title\\" aria-describedby=\\"mg-fbm-modal-desc\\" style=\\"z-index: 999999; position: fixed; transition: opacity 0.3s ease; top: 0px; left: 0px; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; visibility: visible; opacity: 1; padding: 20px; box-sizing: border-box;\\"><div style=\\"z-index: 1001; position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);\\"></div><button class=\\"mg-close-button\\" aria-label=\\"Close booking modal\\" type=\\"button\\" style=\\"position: absolute; top: 12px; right: 12px; z-index: 1004;\\"><svg stroke=\\"currentColor\\" fill=\\"currentColor\\" stroke-width=\\"0\\" viewBox=\\"0 0 512 512\\" height=\\"24px\\" width=\\"24px\\" xmlns=\\"http://www.w3.org/2000/svg\\" aria-hidden=\\"true\\"><path d=\\"M289.94 256l95-95A24 24 0 00351 127l-95 95-95-95a24 24 0 00-34 34l95 95-95 95a24 24 0 1034 34l95-95 95 95a24 24 0 0034-34z\\"></path></svg></button><div id=\\"mg-fbm-modal-content\\" style=\\"z-index: 1003; position: relative; width: 100%; max-width: 1100px; background-color: transparent; border-radius: 0.7rem; overflow: hidden;\\"><iframe src=\\"https://cal.meetergo.com/lena/erstberatung?embed=true\\" name=\\"meetergo-embedded-modal\\" allow=\\"payment\\" style=\\"width: 100%; height: 100%; visibility: visible;\\"></iframe></div><div id=\\"mg-fbm-modal-spinner\\" class=\\"mg-spinner\\" role=\\"status\\" aria-label=\\"Loading\\" style=\\"z-index: 1002; display: inline-block; visibility: visible; opacity: 1;\\"></div><div role=\\"status\\" aria-live=\\"polite\\" aria-atomic=\\"true\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px);\\"></div><h2 id=\\"mg-fbm-modal-title\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap;\\">Meetergo Booking</h2><p id=\\"mg-fbm-modal-desc\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap;\\">Calendar booking interface</p></div>"`;
+
+exports[`classic design contract (default, no design flag) floating button click opens the classic modal with today's DOM and events 2`] = `
+Array [
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modal_loading",
+  },
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+]
+`;
+
+exports[`classic design contract (default, no design flag) floating button in every position keeps today's inline styles 1`] = `
+Array [
+  "top-left: position: fixed; z-index: 999; top: 16px; left: 16px;",
+  "top-center: position: fixed; z-index: 999; top: 16px; left: 50%; transform: translate(-50%, 0);",
+  "top-right: position: fixed; z-index: 999; top: 16px; right: 16px;",
+  "middle-left: position: fixed; z-index: 999; top: 50%; left: 16px; transform: translate(0, -50%);",
+  "middle-center: position: fixed; z-index: 999; top: 50%; left: 50%; transform: translate(-50%, -50%);",
+  "middle-right: position: fixed; z-index: 999; top: 50%; right: 16px; transform: translate(0, -50%);",
+  "bottom-left: position: fixed; z-index: 999; bottom: 16px; left: 16px;",
+  "bottom-center: position: fixed; z-index: 999; bottom: 16px; left: 50%; transform: translate(-50%, 0);",
+  "bottom-right: position: fixed; z-index: 999; bottom: 16px; right: 16px;",
+]
+`;
+
+exports[`classic design contract (default, no design flag) injects exactly today's global style ids 1`] = `
+Array [
+  "
+    @keyframes mg-video-spin {
+      0%   { transform: translate(-50%,-50%) rotate(0deg); }
+      100% { transform: translate(-50%,-50%) rotate(360deg); }
+    }
+  ",
+  "
+    .mg-float-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0.5rem;
+      padding: 0.8rem 1.2rem;
+      color: white;
+      background-color: var(--mg-brand, #0A64BC);
+      border-radius: 0.5rem;
+      border: none;
+      cursor: pointer;
+      z-index: 999;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      gap: 8px;
+    }
+    .mg-float-button:hover {
+      background-color: var(--mg-brand-hover, #0850A0);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+    .mg-float-button:focus-visible { outline:2px solid var(--mg-brand,#0A64BC); outline-offset:2px; }
+    .mg-float-button:active { transform: translateY(1px); }
+  ",
+  "
+    .mg-sidebar {
+      position: fixed;
+      top: 0;
+      height: 100%;
+      transition: transform 0.3s ease;
+      z-index: 9998;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background-color: #fff;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+    }
+    .mg-sidebar-left  { left:0;  transform:translateX(-100%); }
+    .mg-sidebar-right { right:0; transform:translateX(100%); }
+    .mg-sidebar.open  { transform:translateX(0); }
+
+    .mg-sidebar-toggle {
+      position: fixed;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      min-width: 50px;
+      padding: 12px 8px;
+      transition: background-color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      border: none;
+      outline: none;
+      background-color: var(--mg-brand, #0A64BC);
+      color: white;
+    }
+    .mg-sidebar-toggle-left  { left:0;  border-radius:0 8px 8px 0; }
+    .mg-sidebar-toggle-right { right:0; border-radius:8px 0 0 8px; }
+    .mg-sidebar-toggle:hover { background-color: var(--mg-brand-hover, #0852a8); box-shadow: -4px 0 10px rgba(0,0,0,0.2); }
+    .mg-sidebar-toggle:focus-visible { outline:2px solid #0A64BC; outline-offset:2px; }
+    .mg-sidebar-toggle-hidden { opacity:0; pointer-events:none; }
+    .mg-sidebar-toggle-icon  { width:24px; height:24px; display:flex; align-items:center; justify-content:center; }
+    .mg-sidebar-toggle-text  { writing-mode:vertical-rl; text-orientation:mixed; margin-top:8px; font-size:14px; font-weight:500; }
+    .mg-sidebar-close {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: none; border: none;
+      cursor: pointer; color: #666; padding: 5px; font-size: 20px; z-index: 10000;
+    }
+    .mg-sidebar-close:hover { color:#000; }
+    .mg-sidebar-iframe { width:100%; height:100%; border:none; display:block; flex:1; overflow:auto; }
+  ",
+  "
+    @keyframes mg-pulse   { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05); } }
+    @keyframes mg-bounce  { 0%,20%,50%,80%,100%{transform:translateY(0);} 40%{transform:translateY(-10px);} 60%{transform:translateY(-5px);} }
+    @keyframes mg-slide-r { 0%{transform:translateX(100%);opacity:0;} 100%{transform:translateX(0);opacity:1;} }
+    @keyframes mg-slide-l { 0%{transform:translateX(-100%);opacity:0;} 100%{transform:translateX(0);opacity:1;} }
+    @keyframes mg-slide-t { 0%{transform:translateY(-100%);opacity:0;} 100%{transform:translateY(0);opacity:1;} }
+    @keyframes mg-slide-b { 0%{transform:translateY(100%);opacity:0;} 100%{transform:translateY(0);opacity:1;} }
+    .mg-anim-pulse        { animation: mg-pulse  2s infinite ease-in-out; }
+    .mg-anim-bounce       { animation: mg-bounce 2s infinite; }
+    .mg-anim-slide-in     { animation: mg-slide-r 0.5s forwards; }
+  ",
+  "
+    .mg-close-button {
+      all: unset;
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: #fff;
+      border-radius: 100%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 350ms;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+    .mg-close-button:hover { color: #000; }
+    .mg-close-button:focus-visible { outline: 2px solid #0A64BC; outline-offset: 2px; }
+
+    .mg-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      animation: mg-spin 0.7s linear infinite;
+      z-index: 1002;
+      box-sizing: border-box;
+    }
+    @keyframes mg-spin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    .mg-inline {
+      overflow: hidden;
+      position: relative;
+      display: block;
+      max-width: 100%;
+    }
+    .mg-inline iframe {
+      width: 100%;
+      border: none;
+      overflow: hidden;
+      display: block;
+      transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .mg-inline[data-align=\\"left\\"]   { margin-right: auto; margin-left: 0; }
+    .mg-inline[data-align=\\"center\\"] { margin-left: auto; margin-right: auto; }
+    .mg-inline[data-align=\\"right\\"]  { margin-left: auto; margin-right: 0; }
+  ",
+]
+`;
+
+exports[`classic design contract (default, no design flag) modal open/close cycle: DOM, events and focus return: closed 1`] = `"<div id=\\"mg-m-modal\\" role=\\"dialog\\" aria-modal=\\"true\\" aria-labelledby=\\"mg-m-modal-title\\" aria-describedby=\\"mg-m-modal-desc\\" style=\\"z-index: 999999; position: fixed; transition: visibility 0s linear 0.1s, opacity 0.3s ease; top: 0px; left: 0px; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; visibility: hidden; opacity: 0; padding: 20px; box-sizing: border-box;\\"><div style=\\"z-index: 1001; position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);\\"></div><button class=\\"mg-close-button\\" aria-label=\\"Close booking modal\\" type=\\"button\\" style=\\"position: absolute; top: 12px; right: 12px; z-index: 1004;\\"><svg stroke=\\"currentColor\\" fill=\\"currentColor\\" stroke-width=\\"0\\" viewBox=\\"0 0 512 512\\" height=\\"24px\\" width=\\"24px\\" xmlns=\\"http://www.w3.org/2000/svg\\" aria-hidden=\\"true\\"><path d=\\"M289.94 256l95-95A24 24 0 00351 127l-95 95-95-95a24 24 0 00-34 34l95 95-95 95a24 24 0 1034 34l95-95 95 95a24 24 0 0034-34z\\"></path></svg></button><div id=\\"mg-m-modal-content\\" style=\\"z-index: 1003; position: relative; width: 100%; max-width: 1100px; background-color: transparent; border-radius: 0.7rem; overflow: hidden;\\"></div><div id=\\"mg-m-modal-spinner\\" class=\\"mg-spinner\\" role=\\"status\\" aria-label=\\"Loading\\" style=\\"z-index: 1002; display: none; visibility: visible; opacity: 1;\\"></div><div role=\\"status\\" aria-live=\\"polite\\" aria-atomic=\\"true\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px);\\"></div><h2 id=\\"mg-m-modal-title\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap;\\">Meetergo Booking</h2><p id=\\"mg-m-modal-desc\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap;\\">Calendar booking interface</p></div>"`;
+
+exports[`classic design contract (default, no design flag) modal open/close cycle: DOM, events and focus return: events 1`] = `
+Array [
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modal_loading",
+  },
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modalClosed",
+  },
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modal_loading",
+  },
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modalClosed",
+  },
+]
+`;
+
+exports[`classic design contract (default, no design flag) modal open/close cycle: DOM, events and focus return: open 1`] = `"<div id=\\"mg-m-modal\\" role=\\"dialog\\" aria-modal=\\"true\\" aria-labelledby=\\"mg-m-modal-title\\" aria-describedby=\\"mg-m-modal-desc\\" style=\\"z-index: 999999; position: fixed; transition: opacity 0.3s ease; top: 0px; left: 0px; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; visibility: visible; opacity: 1; padding: 20px; box-sizing: border-box;\\"><div style=\\"z-index: 1001; position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);\\"></div><button class=\\"mg-close-button\\" aria-label=\\"Close booking modal\\" type=\\"button\\" style=\\"position: absolute; top: 12px; right: 12px; z-index: 1004;\\"><svg stroke=\\"currentColor\\" fill=\\"currentColor\\" stroke-width=\\"0\\" viewBox=\\"0 0 512 512\\" height=\\"24px\\" width=\\"24px\\" xmlns=\\"http://www.w3.org/2000/svg\\" aria-hidden=\\"true\\"><path d=\\"M289.94 256l95-95A24 24 0 00351 127l-95 95-95-95a24 24 0 00-34 34l95 95-95 95a24 24 0 1034 34l95-95 95 95a24 24 0 0034-34z\\"></path></svg></button><div id=\\"mg-m-modal-content\\" style=\\"z-index: 1003; position: relative; width: 100%; max-width: 1100px; background-color: transparent; border-radius: 0.7rem; overflow: hidden;\\"><iframe src=\\"https://cal.meetergo.com/lena/erstberatung?firstname=Jonas&amp;embed=true\\" name=\\"meetergo-embedded-modal\\" title=\\"Meetergo booking\\" allow=\\"payment\\" loading=\\"lazy\\" style=\\"width: 100%; height: 100%; min-height: 400px; display: block; overflow: hidden; visibility: hidden;\\"></iframe></div><div id=\\"mg-m-modal-spinner\\" class=\\"mg-spinner\\" role=\\"status\\" aria-label=\\"Loading\\" style=\\"z-index: 1002; display: inline-block; visibility: visible; opacity: 1;\\"></div><div role=\\"status\\" aria-live=\\"polite\\" aria-atomic=\\"true\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px);\\"></div><h2 id=\\"mg-m-modal-title\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap;\\">Meetergo Booking</h2><p id=\\"mg-m-modal-desc\\" style=\\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap;\\">Calendar booking interface</p></div>"`;
+
+exports[`classic design contract (default, no design flag) modal with prerender: warm-up parking and acquire keep today's behaviour: acquired 1`] = `"<iframe src=\\"https://cal.meetergo.com/lena/erstberatung?embed=true\\" name=\\"meetergo-embedded-modal\\" allow=\\"payment\\" style=\\"width: 100%; height: 100%; visibility: visible;\\"></iframe>"`;
+
+exports[`classic design contract (default, no design flag) modal with prerender: warm-up parking and acquire keep today's behaviour: events 1`] = `
+Array [
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modal_loading",
+  },
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modalClosed",
+  },
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+  Object {
+    "data": Object {},
+    "event": "modal_loading",
+  },
+  Object {
+    "data": Object {
+      "link": "https://cal.meetergo.com/lena/erstberatung",
+    },
+    "event": "modalOpened",
+  },
+]
+`;
+
+exports[`classic design contract (default, no design flag) modal with prerender: warm-up parking and acquire keep today's behaviour: parking 1`] = `"<div id=\\"mg-prerender-parking-pr\\" style=\\"position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; top: -9999px; left: -9999px; z-index: -1;\\"><iframe src=\\"https://cal.meetergo.com/lena/erstberatung?embed=true\\" name=\\"mg-prerender-pr-4fzzzx\\" allow=\\"payment\\" style=\\"width: 900px; height: 700px; visibility: hidden;\\"></iframe></div>"`;
+
+exports[`classic design contract (default, no design flag) sidebar DOM, ids, classes, open/close events and focus: closed 1`] = `"<div id=\\"mg-prerender-parking-sb\\" style=\\"position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; top: -9999px; left: -9999px; z-index: -1;\\"></div><div id=\\"mg-sb-sidebar-right\\" class=\\"mg-sidebar mg-sidebar-right\\" style=\\"width: 420px; background-color: rgb(15, 123, 95);\\" inert=\\"\\"><button class=\\"mg-sidebar-close\\" aria-label=\\"Close sidebar\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><line x1=\\"18\\" y1=\\"6\\" x2=\\"6\\" y2=\\"18\\"></line><line x1=\\"6\\" y1=\\"6\\" x2=\\"18\\" y2=\\"18\\"></line></svg></button><iframe class=\\"mg-sidebar-iframe\\" src=\\"https://cal.meetergo.com/lena/erstberatung?embed=true\\" title=\\"Meetergo booking sidebar\\" allow=\\"payment\\"></iframe></div><button class=\\"mg-sidebar-toggle mg-sidebar-toggle-right\\" aria-label=\\"Termin buchen\\" style=\\"background-color: rgb(15, 123, 95); color: rgb(255, 255, 255); top: 50%; transform: translateY(-50%);\\"><span class=\\"mg-sidebar-toggle-icon\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><rect width=\\"18\\" height=\\"18\\" x=\\"3\\" y=\\"4\\" rx=\\"2\\" ry=\\"2\\"></rect><line x1=\\"16\\" x2=\\"16\\" y1=\\"2\\" y2=\\"6\\"></line><line x1=\\"8\\" x2=\\"8\\" y1=\\"2\\" y2=\\"6\\"></line><line x1=\\"3\\" x2=\\"21\\" y1=\\"10\\" y2=\\"10\\"></line></svg></span><span class=\\"mg-sidebar-toggle-text\\">Termin buchen</span></button>"`;
+
+exports[`classic design contract (default, no design flag) sidebar DOM, ids, classes, open/close events and focus: events 1`] = `
+Array [
+  Object {
+    "data": Object {
+      "position": "right",
+    },
+    "event": "sidebarOpened",
+  },
+  Object {
+    "data": Object {
+      "position": "right",
+    },
+    "event": "sidebarClosed",
+  },
+]
+`;
+
+exports[`classic design contract (default, no design flag) sidebar DOM, ids, classes, open/close events and focus: open 1`] = `"<div id=\\"mg-sb-sidebar-right\\" class=\\"mg-sidebar mg-sidebar-right open\\" style=\\"width: 420px; background-color: rgb(15, 123, 95);\\"><button class=\\"mg-sidebar-close\\" aria-label=\\"Close sidebar\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><line x1=\\"18\\" y1=\\"6\\" x2=\\"6\\" y2=\\"18\\"></line><line x1=\\"6\\" y1=\\"6\\" x2=\\"18\\" y2=\\"18\\"></line></svg></button><iframe class=\\"mg-sidebar-iframe\\" src=\\"https://cal.meetergo.com/lena/erstberatung?embed=true\\" title=\\"Meetergo booking sidebar\\" allow=\\"payment\\"></iframe></div>"`;
+
+exports[`classic design contract (default, no design flag) sidebar left with defaults 1`] = `"<div id=\\"mg-prerender-parking-sl\\" style=\\"position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; top: -9999px; left: -9999px; z-index: -1;\\"></div><div id=\\"mg-sl-sidebar-left\\" class=\\"mg-sidebar mg-sidebar-left\\" style=\\"width: 400px;\\" inert=\\"\\"><button class=\\"mg-sidebar-close\\" aria-label=\\"Close sidebar\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><line x1=\\"18\\" y1=\\"6\\" x2=\\"6\\" y2=\\"18\\"></line><line x1=\\"6\\" y1=\\"6\\" x2=\\"18\\" y2=\\"18\\"></line></svg></button><iframe class=\\"mg-sidebar-iframe\\" src=\\"https://cal.meetergo.com/lena/erstberatung?embed=true\\" title=\\"Meetergo booking sidebar\\" allow=\\"payment\\"></iframe></div><button class=\\"mg-sidebar-toggle mg-sidebar-toggle-left\\" aria-label=\\"Open Scheduler\\" style=\\"top: 50%; transform: translateY(-50%);\\"><span class=\\"mg-sidebar-toggle-icon\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><rect width=\\"18\\" height=\\"18\\" x=\\"3\\" y=\\"4\\" rx=\\"2\\" ry=\\"2\\"></rect><line x1=\\"16\\" x2=\\"16\\" y1=\\"2\\" y2=\\"6\\"></line><line x1=\\"8\\" x2=\\"8\\" y1=\\"2\\" y2=\\"6\\"></line><line x1=\\"3\\" x2=\\"21\\" y1=\\"10\\" y2=\\"10\\"></line></svg></span><span class=\\"mg-sidebar-toggle-text\\">Open Scheduler</span></button>"`;
+
+exports[`classic design contract (default, no design flag) video embed DOM, styles and expand/minimize events: events 1`] = `
+Array [
+  "videoExpanded",
+  "modalOpened",
+  "modal_loading",
+  "modalOpened",
+  "videoMinimized",
+]
+`;
+
+exports[`classic design contract (default, no design flag) video embed DOM, styles and expand/minimize events: expanded 1`] = `"<div id=\\"mg-video-v-4fzzzx\\" style=\\"position: fixed; z-index: 1001; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease, width 0.3s ease, height 0.3s ease; border: 2px solid #0f7b5f; width: 340px; height: 280px; border-radius: 8px; bottom: 16px; right: 16px;\\"><video loop=\\"\\" playsinline=\\"\\" autoplay=\\"\\" preload=\\"metadata\\" poster=\\"https://cdn.example.com/p.jpg\\" style=\\"width: 100%; height: 100%; object-fit: cover;\\" src=\\"https://cdn.example.com/v.mp4\\"></video><div style=\\"position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff; animation: mg-video-spin 1s linear infinite; display: none;\\"></div><div style=\\"position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none;\\"><div style=\\"position: absolute; top: 10px; right: 10px; background-color: rgba(0, 0, 0, 0.5); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; z-index: 10;\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"12\\" height=\\"12\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"white\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><line x1=\\"18\\" y1=\\"6\\" x2=\\"6\\" y2=\\"18\\"></line><line x1=\\"6\\" y1=\\"6\\" x2=\\"18\\" y2=\\"18\\"></line></svg></div><div style=\\"position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: bold; text-align: center; white-space: nowrap; padding: 8px; max-width: 100%; overflow: hidden; background-color: rgba(0, 0, 0, 0.4); border-radius: 4px; display: none;\\">Click to watch</div></div><button style=\\"position: absolute; bottom: 10px; left: 50%; width: 90%; transform: translateX(-50%); padding: 10px 20px; background-color: rgb(15, 123, 95); color: white; border-radius: 4px; font-weight: bold; cursor: pointer; display: block; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 14px;\\">Termin buchen</button><button style=\\"position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 60px; height: 60px; background-color: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; padding: 0px; opacity: 0;\\" aria-label=\\"Pause video\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"white\\" stroke-width=\\"2\\" aria-hidden=\\"true\\"><rect x=\\"6\\" y=\\"4\\" width=\\"4\\" height=\\"16\\"></rect><rect x=\\"14\\" y=\\"4\\" width=\\"4\\" height=\\"16\\"></rect></svg></button><button style=\\"position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; background-color: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; padding: 0px;\\" aria-label=\\"Mute video\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"16\\" height=\\"16\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"white\\" stroke-width=\\"2\\" aria-hidden=\\"true\\"><polygon points=\\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\\"></polygon><path d=\\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\\"></path></svg></button><div style=\\"position: absolute; top: 0px; left: 0px; width: 100%; height: 5px; background-color: rgba(0, 0, 0, 0.3); display: block; z-index: 10; overflow: hidden;\\"><div style=\\"width: 0%; height: 100%; background-color: rgb(15, 123, 95); transition: width 0.05s linear; border-radius: 0 3px 3px 0;\\"></div></div></div>"`;
+
+exports[`classic design contract (default, no design flag) video embed DOM, styles and expand/minimize events: minimized 1`] = `"<div id=\\"mg-video-v-4fzzzx\\" style=\\"position: fixed; z-index: 1000; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease, width 0.3s ease, height 0.3s ease; border: 2px solid #0f7b5f; width: 200px; height: 158px; border-radius: 8px; bottom: 16px; right: 16px;\\"><video loop=\\"\\" playsinline=\\"\\" autoplay=\\"\\" preload=\\"metadata\\" poster=\\"https://cdn.example.com/p.jpg\\" style=\\"width: 100%; height: 100%; object-fit: cover;\\" src=\\"https://cdn.example.com/v.mp4\\"></video><div style=\\"position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff; animation: mg-video-spin 1s linear infinite; display: none;\\"></div><div style=\\"position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none;\\"><div style=\\"position: absolute; top: 10px; right: 10px; background-color: rgba(0, 0, 0, 0.5); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; z-index: 10;\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"12\\" height=\\"12\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"white\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" aria-hidden=\\"true\\"><line x1=\\"18\\" y1=\\"6\\" x2=\\"6\\" y2=\\"18\\"></line><line x1=\\"6\\" y1=\\"6\\" x2=\\"18\\" y2=\\"18\\"></line></svg></div><div style=\\"position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: bold; text-align: center; white-space: nowrap; padding: 8px; max-width: 100%; overflow: hidden; background-color: rgba(0, 0, 0, 0.4); border-radius: 4px;\\">Click to watch</div></div><button style=\\"position: absolute; bottom: 10px; left: 50%; width: 90%; transform: translateX(-50%); padding: 10px 20px; background-color: rgb(15, 123, 95); color: white; border-radius: 4px; font-weight: bold; cursor: pointer; display: none; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 14px;\\">Termin buchen</button><button style=\\"position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 60px; height: 60px; background-color: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10; padding: 0px; opacity: 0;\\" aria-label=\\"Pause video\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"white\\" stroke-width=\\"2\\" aria-hidden=\\"true\\"><rect x=\\"6\\" y=\\"4\\" width=\\"4\\" height=\\"16\\"></rect><rect x=\\"14\\" y=\\"4\\" width=\\"4\\" height=\\"16\\"></rect></svg></button><button style=\\"position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; background-color: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10; padding: 0px;\\" aria-label=\\"Mute video\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"16\\" height=\\"16\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"white\\" stroke-width=\\"2\\" aria-hidden=\\"true\\"><polygon points=\\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\\"></polygon><path d=\\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\\"></path></svg></button><div style=\\"position: absolute; top: 0px; left: 0px; width: 100%; height: 5px; background-color: rgba(0, 0, 0, 0.3); display: none; z-index: 10; overflow: hidden;\\"><div style=\\"width: 0%; height: 100%; background-color: rgb(15, 123, 95); transition: width 0.05s linear; border-radius: 0 3px 3px 0;\\"></div></div></div>"`;

@@ -12,6 +12,7 @@
 import { MeetergoNamespace } from "./namespace.js";
 import { DataAttrScanner } from "../modules/data-attr-scanner.js";
 import { errorHandler } from "../utils/error-handler.js";
+import { normalizeDesign } from "../design/resolve.js";
 
 import type {
   NamespaceConfig,
@@ -43,8 +44,8 @@ export class MeetergoSDK {
 
   constructor() {
     this.scanner = new DataAttrScanner({
-      openModal: (link, ns, prefill) => {
-        this.getOrCreate(ns).openModal(link, prefill);
+      openModal: (link, ns, prefill, design) => {
+        this.getOrCreate(ns).openModal(link, prefill, normalizeDesign(design));
       },
       openSidebar: (ns) => {
         this.getOrCreate(ns).toggleSidebar();

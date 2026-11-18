@@ -25,14 +25,14 @@ const MODAL_CLOSE_TRANSITION = "visibility 0s linear 0.1s, opacity 0.3s ease";
 const MODAL_OPEN_TRANSITION = "opacity 0.3s ease";
 
 export class ModalManager {
-  private readonly ns: string;
-  private readonly bus: EventBus;
-  private readonly prerender: PrerenderManager | null;
-  private readonly config: NamespaceConfig;
+  protected readonly ns: string;
+  protected readonly bus: EventBus;
+  protected readonly prerender: PrerenderManager | null;
+  protected readonly config: NamespaceConfig;
 
-  private focusHandle: ModalFocusHandle | null = null;
+  protected focusHandle: ModalFocusHandle | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-  private currentLink: string | null = null;
+  protected currentLink: string | null = null;
   private currentColorSchemeHandle: { stop(): void } | null = null;
   private loadTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private openCount = 0;
@@ -46,7 +46,7 @@ export class ModalManager {
 
   /** Create the modal DOM once (idempotent). */
   initialize(): void {
-    if (domCache.getElementById(this.modalId())) return;
+    if (this.chromeRoot()) return;
     this.createModalElements();
     this.setupKeyboardHandler();
   }
@@ -59,7 +59,7 @@ export class ModalManager {
 
     // Smart reuse: same link already loaded → just show, fire bookerReopened
     if (this.currentLink === link && !this.isOpen()) {
-      const modalContent = domCache.getElementById(this.contentId());
+      const modalContent = this.contentEl();
       const existingIframe = modalContent?.querySelector("iframe");
       if (existingIframe) {
         this.openCount++;
@@ -80,7 +80,7 @@ export class ModalManager {
 
     this.bus.emit("modal_loading", {});
 
-    const modalContent = domCache.getElementById(this.contentId());
+    const modalContent = this.contentEl();
     if (!modalContent) return;
 
     modalContent.innerHTML = "";
@@ -152,39 +152,32 @@ export class ModalManager {
   }
 
   openModal(): void {
-    const modal = domCache.getElementById(this.modalId());
+    const modal = this.chromeRoot();
     if (!modal) return;
 
-    modal.style.transition = MODAL_OPEN_TRANSITION;
-    modal.style.visibility = "visible";
-    modal.style.opacity = "1";
+    this.showChrome(modal);
     document.body.style.overflow = "hidden";
 
     // Move focus into the modal and keep the host page out of the tab order
     if (!this.focusHandle) {
-      const closeBtn = modal.querySelector(".mg-close-button") as HTMLElement | null;
-      this.focusHandle = holdFocusInModal(modal, closeBtn);
+      this.focusHandle = this.holdFocus(modal);
     }
 
     this.bus.emit("modalOpened", { link: this.currentLink ?? "" });
   }
 
   closeModal(preserveContent = false): void {
-    const modal = domCache.getElementById(this.modalId());
+    const modal = this.chromeRoot();
     if (!modal) return;
 
     this.clearLoadTimeout();
-    modal.style.transition = MODAL_CLOSE_TRANSITION;
-    modal.style.visibility = "hidden";
-    modal.style.opacity = "0";
+    this.hideChrome(modal);
     document.body.style.overflow = "";
     this.hideSkeleton();
 
     // Return prerendered iframe to parking
     if (this.prerender && this.currentLink) {
-      const iframe = domCache
-        .getElementById(this.contentId())
-        ?.querySelector("iframe") as HTMLIFrameElement | null;
+      const iframe = this.contentEl()?.querySelector("iframe") as HTMLIFrameElement | null;
       if (iframe) {
         this.prerender.release(this.currentLink);
       }
@@ -196,7 +189,7 @@ export class ModalManager {
 
     if (!preserveContent) {
       setTimeout(() => {
-        const content = domCache.getElementById(this.contentId());
+        const content = this.contentEl();
         if (content) content.innerHTML = "";
       }, 300);
     }
@@ -217,31 +210,61 @@ export class ModalManager {
   destroy(): void {
     if (this.isOpen()) this.closeModal();
     this.keydownHandler && document.removeEventListener("keydown", this.keydownHandler);
+    this.removeChrome();
+  }
 
+  // ── Chrome hooks (the design-2026 modal overrides these; the booking
+  //    iframe, prerender and event logic above is shared by both designs) ──
+
+  /** Root element of the modal chrome, or null before initialize(). */
+  protected chromeRoot(): HTMLElement | null {
+    return domCache.getElementById(this.modalId());
+  }
+
+  /** Container the booking iframe goes into. */
+  protected contentEl(): HTMLElement | null {
+    return domCache.getElementById(this.contentId());
+  }
+
+  protected showChrome(modal: HTMLElement): void {
+    modal.style.transition = MODAL_OPEN_TRANSITION;
+    modal.style.visibility = "visible";
+    modal.style.opacity = "1";
+  }
+
+  protected hideChrome(modal: HTMLElement): void {
+    modal.style.transition = MODAL_CLOSE_TRANSITION;
+    modal.style.visibility = "hidden";
+    modal.style.opacity = "0";
+  }
+
+  protected holdFocus(modal: HTMLElement): ModalFocusHandle {
+    const closeBtn = modal.querySelector(".mg-close-button") as HTMLElement | null;
+    return holdFocusInModal(modal, closeBtn);
+  }
+
+  protected removeChrome(): void {
     const modal = domCache.getElementById(this.modalId());
     modal?.parentNode?.removeChild(modal);
     domCache.remove(this.modalId());
     domCache.remove(this.contentId());
   }
 
-  // ── Private ───────────────────────────────────────────────────────────────
-
-  private modalId()   { return `mg-${this.ns}-modal`; }
-  private contentId() { return `mg-${this.ns}-modal-content`; }
+  protected modalId(): string   { return `mg-${this.ns}-modal`; }
+  protected contentId(): string { return `mg-${this.ns}-modal-content`; }
   private spinnerId() { return `mg-${this.ns}-modal-spinner`; }
 
-  private showSkeleton(): void {
+  protected showSkeleton(): void {
     const spinner = domCache.getElementById(this.spinnerId());
     if (spinner) { spinner.style.display = "inline-block"; spinner.style.visibility = "visible"; spinner.style.opacity = "1"; }
   }
 
-  private hideSkeleton(): void {
+  protected hideSkeleton(): void {
     const spinner = domCache.getElementById(this.spinnerId());
     if (spinner) { spinner.style.display = "none"; }
   }
 
-  private showSpinner(): void { this.showSkeleton(); }
-  private hideSpinner(): void { this.hideSkeleton(); }
+  // ── Private ───────────────────────────────────────────────────────────────
 
   private clearLoadTimeout(): void {
     if (this.loadTimeoutId !== null) {
@@ -250,7 +273,7 @@ export class ModalManager {
     }
   }
 
-  private createModalElements(): void {
+  protected createModalElements(): void {
     const modal = document.createElement("div");
     modal.id = this.modalId();
     modal.setAttribute("role", "dialog");

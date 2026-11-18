@@ -22,6 +22,22 @@ export type ButtonAnimation = "pulse" | "bounce" | "slide-in" | "none";
 export type ColorScheme = "light" | "dark" | "auto";
 export type IframeAlignment = "left" | "center" | "right";
 export type EmbedLayout = "modal" | "sidebar" | "inline";
+/** Widget design. "classic" is today's look and the default; "2026" is the redesign. */
+export type WidgetDesign = "2026" | "classic";
+/** Host photo in design 2026: the booking page's host, a custom image URL, or none. */
+export type AvatarSetting = "host" | false | string;
+
+/** Options read only by the 2026 design (ignored by "classic"). */
+export interface Design2026Options {
+  /** Design for this widget; wins over the namespace `design`. */
+  design?: WidgetDesign;
+  /** Show the next free time and times from the booking page (default true). */
+  showNextSlot?: boolean;
+  /** Host photo: "host" (default), an image URL, or false. */
+  avatar?: AvatarSetting;
+  /** Override the sub-line text under the label. */
+  subline?: string;
+}
 
 // ─── Prefill ──────────────────────────────────────────────────────────────────
 
@@ -93,6 +109,8 @@ export interface UiConfig {
   hideEventTypeDetails?: boolean;
   /** Background for the booker body */
   bodyBackground?: string;
+  /** Booking modal design; wins over the namespace `design`. */
+  design?: WidgetDesign;
 }
 
 // ─── Events (V2, discriminated unions) ───────────────────────────────────────
@@ -205,7 +223,7 @@ export type EventHandler<E extends MeetergoEvent = MeetergoEvent> = (event: E) =
 
 // ─── Component Configs ────────────────────────────────────────────────────────
 
-export interface FloatingButtonConfig {
+export interface FloatingButtonConfig extends Design2026Options {
   link: string;
   position?: Position;
   text?: string;
@@ -217,7 +235,7 @@ export interface FloatingButtonConfig {
   domId?: string;
 }
 
-export interface SidebarConfig {
+export interface SidebarConfig extends Design2026Options {
   link: string;
   position?: SidebarPosition;
   width?: string;
@@ -228,7 +246,9 @@ export interface SidebarConfig {
   textColor?: string;
 }
 
-export interface VideoEmbedConfig {
+export interface VideoEmbedConfig extends Design2026Options {
+  /** WebVTT captions shown in the expanded video card (design 2026 only). */
+  captionsSrc?: string;
   videoSrc: string;
   posterImage?: string;
   bookingLink: string;
@@ -276,6 +296,13 @@ export interface NamespaceConfig {
 
   /** Base URL for the meetergo booking app */
   origin?: string;
+
+  /**
+   * Design of every widget in this namespace: "classic" (default, today's
+   * look) or "2026". Per-widget `design` (and `ui.design` for the modal) wins.
+   * Also settable with data-meetergo-design="2026" on the script tag.
+   */
+  design?: WidgetDesign;
 
   /** Global prefill for all embeds in this namespace */
   prefill?: MeetergoPrefill;
