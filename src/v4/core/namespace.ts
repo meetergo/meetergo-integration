@@ -368,7 +368,8 @@ export class MeetergoNamespace {
       fn(m);
     };
     if (this.modal2026 || loadedDesign()) use();
-    else loadDesign().then(use, () => { this.modal2026Failed = true; use(); });
+    // A modal open is a user action (or an explicit API call): load now
+    else loadDesign(true).then(use, () => { this.modal2026Failed = true; use(); });
   }
 
   private getModal2026(): ModalManager | null {

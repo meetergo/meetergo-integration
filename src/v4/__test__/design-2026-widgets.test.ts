@@ -540,4 +540,17 @@ describe("video hls (2026)", () => {
     await flush();
     expect(instance.attachMedia).not.toHaveBeenCalled();
   });
+
+  it("a throwing new Hls() leaves exactly one (2026) video, no classic fallback", async () => {
+    sdkWith({ design: "2026", prerender: false, videoEmbed: { videoSrc: "https://v.example.com/c.m3u8", bookingLink: LINK } });
+    await flush();
+    (window as unknown as { Hls: unknown }).Hls = Object.assign(function () { throw new Error("boom"); }, { isSupported: () => true, Events: { ERROR: "e", MANIFEST_PARSED: "m" } });
+    (document.head.querySelector('script[src*="hls.js"]') as HTMLScriptElement).onload?.(new Event("load"));
+    await flush();
+    await flush();
+    const hosts = document.querySelectorAll('[id^="mg-video-default-"]');
+    expect(hosts).toHaveLength(1);
+    expect((hosts[0] as HTMLElement).shadowRoot).not.toBeNull();
+    expect(document.querySelectorAll("video")).toHaveLength(0); // the only video lives in the shadow root
+  });
 });

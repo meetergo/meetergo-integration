@@ -5,6 +5,10 @@
  * from the same directory as the SDK script (https://cdn.meetergo.com/v4/ for
  * integration.js), so the one-year immutable CDN cache is safe. Classic-only
  * pages never request it. If it cannot be loaded, callers render classic.
+ *
+ * The download never holds back the host page's `load` event: it starts once
+ * `load` has fired (in an idle callback), or at once when the visitor
+ * interacts with a 2026 widget (e.g. clicks a 2026 booking button) earlier.
  */
 
 import { ModalManager } from "../modules/modal-manager.js";
@@ -25,6 +29,7 @@ let scriptBase: string | null = null;
 let api: DesignApi | null = null;
 let pending: Promise<DesignApi> | null = null;
 let failed = false;
+let startNow: (() => void) | null = null;
 
 /** Remember the directory the SDK script was loaded from (call while it evaluates). */
 export function captureScriptBase(script: Element | null | undefined): void {
@@ -57,15 +62,32 @@ function inject(url: string): Promise<void> {
   });
 }
 
-/** Load the chunk once per page; rejects (and stays rejected) if it cannot be loaded. */
-export function loadDesign(): Promise<DesignApi> {
+/** Run `fn` once the page's load event has fired, when the browser is idle. */
+function afterLoad(fn: () => void): void {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  const idle = () => (w.requestIdleCallback ? w.requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 0));
+  if (document.readyState === "complete") idle();
+  else window.addEventListener("load", idle, { once: true });
+}
+
+/**
+ * Load the chunk once per page; rejects (and stays rejected) if it cannot be
+ * loaded. `now` (a user interaction) starts the download immediately instead
+ * of after the page's load event.
+ */
+export function loadDesign(now = false): Promise<DesignApi> {
   const ready = loadedDesign();
   if (ready) return Promise.resolve(ready);
   if (failed) return Promise.reject(new Error("design chunk unavailable"));
   if (!pending) {
     const primary = (scriptBase ?? CDN_BASE) + DESIGN_CHUNK;
     const fallback = CDN_BASE + DESIGN_CHUNK;
-    pending = inject(primary)
+    let kick: () => void = () => undefined;
+    const start = new Promise<void>((resolve) => { kick = resolve; });
+    startNow = kick;
+    afterLoad(kick); // this request's own trigger (a stale one cannot start a later request)
+    pending = start
+      .then(() => inject(primary))
       .catch((err) => (primary !== fallback ? inject(fallback) : Promise.reject(err)))
       .then(() => loadedDesign() as DesignApi)
       .catch((err) => {
@@ -75,6 +97,7 @@ export function loadDesign(): Promise<DesignApi> {
         throw err;
       });
   }
+  if (now) startNow?.();
   return pending;
 }
 
@@ -84,4 +107,5 @@ export function resetDesignLoader(): void {
   pending = null;
   failed = false;
   scriptBase = null;
+  startNow = null;
 }

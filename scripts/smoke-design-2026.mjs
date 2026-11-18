@@ -176,6 +176,25 @@ try {
     check(errors.length === 0, "video: no page errors");
     await ctx.close();
   }
+  // ── A hanging design chunk never holds back window.onload; classic after the timeout
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const p = await ctx.newPage();
+    await p.route(/cal\.meetergo\.com/, (r) => r.fulfill({ status: 200, contentType: "text/html", body: "stub" }));
+    let chunkAt = 0;
+    await p.route(/design-2026\.[^/]*\.js$/, () => { chunkAt = Date.now(); /* never answer */ });
+    let loadAt = 0;
+    p.on("load", () => { loadAt = Date.now(); });
+    const t0 = Date.now();
+    await p.goto(`${base}?design=2026&widget=floating`, { waitUntil: "load", timeout: 5000 });
+    check(Date.now() - t0 < 5000, `hanging chunk: window load fired after ${Date.now() - t0} ms`);
+    await p.waitForTimeout(500);
+    check(chunkAt > 0 && chunkAt >= loadAt, "hanging chunk: requested only after the load event");
+    // own directory times out (10 s), then the CDN copy (10 s), then classic
+    await p.locator("#mg-default-float-btn.mg-float-button").waitFor({ timeout: 30000 });
+    check(true, "hanging chunk: classic button after the loader timeout");
+    await ctx.close();
+  }
   // ── Classic stays classic
   {
     const { p, ctx, requests } = await page({ design: "classic", widget: "all" });
@@ -189,6 +208,7 @@ try {
   // ── Reduced motion and visitor dark mode: still light, no animation
   {
     const { p, ctx } = await page({ design: "2026", widget: "floating", dark: "on" }, undefined, { reducedMotion: "reduce", colorScheme: "dark" });
+    await shadow(p, "#mg-default-float-btn", ".pill").waitFor();
     const anim = await p.evaluate(() => getComputedStyle(document.getElementById("mg-default-float-btn").shadowRoot.querySelector(".pill")).animationName);
     check(anim === "none", `reduced motion: no entrance animation (${anim})`);
     const bg = await p.evaluate(() => { document.getElementById("mg-default-float-btn").shadowRoot.querySelector(".launch").hidden = false; return getComputedStyle(document.getElementById("mg-default-float-btn").shadowRoot.querySelector(".launch")).backgroundColor; });

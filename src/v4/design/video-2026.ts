@@ -270,6 +270,8 @@ export class Video2026Manager {
       throw err;
     }
 
+    // The widget is on the page now: source problems below must never reject
+    // (a rejection would make the namespace render a second, classic video)
     const video = this.host?.shadowRoot?.querySelector("video") as HTMLVideoElement | null;
     if (!video) return;
     if (config.videoSrc.endsWith(".m3u8")) await this.attachHls(video, config.videoSrc, config.posterImage);
@@ -286,19 +288,27 @@ export class Video2026Manager {
     this.listeners = null;
   }
 
+  /** Never throws: on any hls.js failure the video keeps its poster (or tries the source natively). */
   private async attachHls(video: HTMLVideoElement, src: string, poster?: string): Promise<void> {
-    if (video.canPlayType("application/vnd.apple.mpegurl")) { video.src = src; return; }
-    await loadHls();
-    // Destroyed (or re-created) while hls.js was loading: attach nothing
-    if (!this.alive || !video.isConnected) return;
-    if (window.Hls?.isSupported()) {
-      const hls = new window.Hls();
-      this.hls = hls as unknown as HlsInstance;
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hls.on(window.Hls.Events.ERROR, (_, data) => { if (data.fatal && poster) video.poster = poster; });
-    } else {
-      video.src = src;
+    try {
+      if (video.canPlayType("application/vnd.apple.mpegurl")) { video.src = src; return; }
+      await loadHls();
+      // Destroyed (or re-created) while hls.js was loading: attach nothing
+      if (!this.alive || !video.isConnected) return;
+      if (window.Hls?.isSupported()) {
+        const hls = new window.Hls();
+        this.hls = hls as unknown as HlsInstance;
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hls.on(window.Hls.Events.ERROR, (_, data) => { if (data.fatal && poster) video.poster = poster; });
+      } else {
+        video.src = src;
+      }
+    } catch (err) {
+      try { this.hls?.destroy(); } catch { /* ignore */ }
+      this.hls = null;
+      rt.errorHandler.handleError({ message: "Video: HLS playback failed", level: "warning", ns: this.ns, error: err as Error });
+      if (this.alive && poster) video.poster = poster;
     }
   }
 }

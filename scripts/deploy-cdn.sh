@@ -24,7 +24,17 @@
 #   3. the entry points themselves, purged and verified.
 #
 # Roll back:  scripts/deploy-cdn.sh --rollback <UTC timestamp>
+# A release without a rollback point is refused unless --no-snapshot is given.
 set -euo pipefail
+
+mode="deploy"; stamp_arg=""; snapshot=1
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --rollback) mode="rollback"; stamp_arg="${2:?usage: scripts/deploy-cdn.sh --rollback <UTC timestamp>}"; shift 2 ;;
+    --no-snapshot) snapshot=0; shift ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
 
 ZONE="meetergo-cdn-prod"
 BUNDLE="dist/v4/browser-ultra.js"
@@ -48,19 +58,34 @@ purge() { # purge <remote path>
   curl -fsS -X POST -H "AccessKey: ${BUNNYNET_API_KEY}" \
     "https://api.bunny.net/purge?url=${CDN}/$1" >/dev/null
 }
+exists() { # exists <remote path>: object present in storage (origin, not the CDN cache)
+  curl -fsS -o /dev/null -H "AccessKey: ${storage_key}" "https://storage.bunnycdn.com/${ZONE}/$1" 2>/dev/null
+}
 verify() { # verify <local file> <remote path>: the CDN serves exactly these bytes
-  local want got
+  # Checks the plain URL (what customers get, possibly from the edge cache after
+  # the purge) and a cache-busted one; retries while the purge propagates.
+  local want got url attempt
   want=$(sha256sum <"$1" | cut -d' ' -f1)
-  got=$(curl -fsS "${CDN}/$2?v=$(date +%s)" | sha256sum | cut -d' ' -f1) || got="missing"
-  if [ "$want" = "$got" ]; then echo "  ok   $2"; else echo "  FAIL $2: live ${got} != built ${want}" >&2; return 1; fi
+  for url in "${CDN}/$2" "${CDN}/$2?v=$(date +%s)"; do
+    for attempt in 1 2 3 4 5 6; do
+      got=$(curl -fsS "$url" | sha256sum | cut -d' ' -f1) || got="missing"
+      [ "$want" = "$got" ] && break
+      [ "$attempt" -lt 6 ] && sleep "${VERIFY_WAIT:-5}"
+    done
+    if [ "$want" != "$got" ]; then
+      echo "  FAIL ${url}: serving ${got}, built ${want} (after 6 attempts)" >&2
+      return 1
+    fi
+  done
+  echo "  ok   $2 (plain and cache-busted)"
 }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 # ── Rollback mode ────────────────────────────────────────────────────────────
-if [ "${1:-}" = "--rollback" ]; then
-  stamp="${2:?usage: scripts/deploy-cdn.sh --rollback <UTC timestamp>}"
+if [ "$mode" = "rollback" ]; then
+  stamp="$stamp_arg"
   for path in "${ENTRYPOINTS[@]}"; do
     snap="${path%.js}-${stamp}.js"
     echo "→ restoring ${path} from ${snap}"
@@ -93,19 +118,26 @@ done
 
 # ── 2. Rollback snapshots ────────────────────────────────────────────────────
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
-for path in "${ENTRYPOINTS[@]}"; do
-  if curl -fsS "${CDN}/${path}?v=${stamp}" -o "$tmp/live.js"; then
+if [ "$snapshot" -eq 1 ]; then
+  for path in "${ENTRYPOINTS[@]}"; do
     snap="${path%.js}-${stamp}.js"
     echo "→ snapshot ${path} → ${snap}"
-    put "$tmp/live.js" "$snap"
-    verify "$tmp/live.js" "$snap"
-  else
-    echo "  (no live ${path} to snapshot)"
-  fi
-done
+    if ! { curl -fsS -H "AccessKey: ${storage_key}" "https://storage.bunnycdn.com/${ZONE}/${path}" -o "$tmp/live.js" \
+           && put "$tmp/live.js" "$snap" && verify "$tmp/live.js" "$snap"; }; then
+      echo "ABORT: could not snapshot ${path}; entry points untouched. Re-run with --no-snapshot to release without a rollback point." >&2
+      exit 1
+    fi
+  done
+else
+  echo "  WARNING: --no-snapshot, releasing without a rollback point"
+fi
 sha=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
-echo "→ uploading build as v4/integration-${sha}.js"
-put "$BUNDLE" "v4/integration-${sha}.js"
+if exists "v4/integration-${sha}.js"; then
+  echo "  v4/integration-${sha}.js already exists (cached for a year), not overwriting"
+else
+  echo "→ uploading build as v4/integration-${sha}.js"
+  put "$BUNDLE" "v4/integration-${sha}.js"
+fi
 
 # ── 3. Entry points ──────────────────────────────────────────────────────────
 for path in "${ENTRYPOINTS[@]}"; do
@@ -121,4 +153,4 @@ for path in "${ENTRYPOINTS[@]}"; do
 done
 echo "done — all entry points serving the current build (design chunk ${chunk_name})"
 echo
-echo "Roll back with:  scripts/deploy-cdn.sh --rollback ${stamp}"
+if [ "$snapshot" -eq 1 ]; then echo "Roll back with:  scripts/deploy-cdn.sh --rollback ${stamp}"; fi
