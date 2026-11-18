@@ -6,7 +6,7 @@ import { modalManager } from "./modules/modal-manager";
 import { sidebarManager } from "./modules/sidebar-manager";
 import { videoEmbedManager } from "./modules/video-embed-manager";
 import {
-  isValidMeetergoOrigin,
+  isTrustedFrameOrigin,
   parseHeightFromMessage,
   createHeightState,
   applyHeightToIframe,
@@ -859,11 +859,6 @@ export class MeetergoIntegration {
     if (this.globalHeightHandler) return; // Already setup
 
     this.globalHeightHandler = (event: MessageEvent) => {
-      // Validate origin using shared utility
-      if (!isValidMeetergoOrigin(event.origin)) {
-        return;
-      }
-
       // Parse height from message using shared utility
       const newHeight = parseHeightFromMessage(event.data);
       if (!newHeight) {
@@ -893,6 +888,11 @@ export class MeetergoIntegration {
 
       // Only update the iframe that sent the message
       if (!matchedIframe || !matchedIframeId) {
+        return;
+      }
+      // From meetergo, or from the origin this script framed (a customer's
+      // own booking domain). Checked once the sender is known to be ours.
+      if (!isTrustedFrameOrigin(event.origin, matchedIframe)) {
         return;
       }
 

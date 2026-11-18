@@ -13,6 +13,7 @@
  *   - Color scheme flash prevention via IframeFactory
  */
 
+import { isTrustedFrameOrigin } from "../../utils/iframe-height.js";
 import { createIframe } from "../utils/iframe-factory.js";
 import { createThrottledResizeHandler } from "../utils/throttle.js";
 import { errorHandler } from "../utils/error-handler.js";
@@ -145,8 +146,9 @@ export class InlineEmbedManager {
     let lastHeight = 0;
 
     const messageHandler = (e: MessageEvent) => {
-      if (!this.isAllowedOrigin(e.origin)) return;
       if (e.source !== iframe.contentWindow) return;
+      // Its own frame may sit on a customer's booking domain.
+      if (!this.isAllowedOrigin(e.origin) && !isTrustedFrameOrigin(e.origin, iframe)) return;
 
       const data = e.data as Record<string, unknown>;
       let newHeight: number | null = null;

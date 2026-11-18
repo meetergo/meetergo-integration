@@ -10,6 +10,7 @@ import { errorHandler } from '../utils/error-handler';
 import { MeetergoModalEvent } from '../declarations';
 import {
   isValidMeetergoOrigin,
+  isTrustedFrameOrigin,
   parseHeightFromMessage,
   createHeightState,
   applyHeightToIframe,
@@ -572,8 +573,14 @@ export class ModalManager {
     const messageListener: EventListener = (evt: Event) => {
       const event = evt as MessageEvent;
 
-      // Validate origin using shared utility (secure validation)
-      if (!isValidMeetergoOrigin(event.origin)) {
+      // From meetergo, or from the modal's own frame, which may sit on a
+      // customer's booking domain (its source must then be that frame).
+      const ownFrame = document.querySelector('#meetergo-modal-content iframe') as HTMLIFrameElement | null;
+      const fromOwnFrame = !!ownFrame && event.source === ownFrame.contentWindow;
+      if (
+        !isValidMeetergoOrigin(event.origin) &&
+        !(fromOwnFrame && isTrustedFrameOrigin(event.origin, ownFrame))
+      ) {
         return;
       }
 

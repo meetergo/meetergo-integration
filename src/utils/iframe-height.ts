@@ -38,6 +38,27 @@ export function isValidMeetergoOrigin(origin: string): boolean {
 }
 
 /**
+ * Whether a message from `origin` may resize or reveal `iframe`: it comes
+ * from meetergo, or from the origin this script itself put into that frame.
+ * The second covers booking pages on a customer's own domain, which report
+ * their height from there; before, their frames stayed at the default height.
+ * Callers only act on a message whose `event.source` is that frame, so no
+ * other page can use this.
+ */
+export function isTrustedFrameOrigin(
+  origin: string,
+  iframe: HTMLIFrameElement | null | undefined,
+): boolean {
+  if (isValidMeetergoOrigin(origin)) return true;
+  if (!iframe?.src) return false;
+  try {
+    return origin === new URL(iframe.src, window.location.href).origin;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Parse height from a message event data object
  * Supports multiple message formats used by meetergo
  */
