@@ -13,6 +13,7 @@
  *   data-meetergo-layout      — "modal" (default) | "sidebar" | "inline"
  *   data-meetergo-prefill-*   — prefill fields (e.g. data-meetergo-prefill-email)
  *   data-meetergo-config      — JSON config object, e.g. '{"theme":"dark","layout":"month_view"}'
+ *   data-meetergo-design      — "2026" | "classic": modal design for this element
  *
  * Uses MutationObserver for SPA compatibility.
  */
@@ -25,7 +26,7 @@ const V3_BTN_CLASS    = "meetergo-modal-button";
 const V3_IFRAME_CLASS = "meetergo-iframe";
 
 export interface DataAttrScannerCallbacks {
-  openModal: (link: string, ns: string, prefill: Record<string, string>) => void;
+  openModal: (link: string, ns: string, prefill: Record<string, string>, design?: string) => void;
   openSidebar: (ns: string) => void;
   embedInline: (link: string, container: HTMLElement, ns: string, prefill: Record<string, string>) => void;
 }
@@ -101,6 +102,7 @@ export class DataAttrScanner {
     if (!link) return;
 
     const prefill = this.extractPrefill(el);
+    const design = el.getAttribute("data-meetergo-design") ?? undefined;
 
     // data-meetergo-config='{"theme":"dark","layout":"month_view"}' — merge into prefill as URL params
     const configAttr = el.getAttribute("data-meetergo-config");
@@ -132,7 +134,7 @@ export class DataAttrScanner {
     // Default: modal
     el.addEventListener("click", (e) => {
       e.preventDefault();
-      this.callbacks.openModal(link, ns, prefill);
+      this.callbacks.openModal(link, ns, prefill, design);
     });
 
     // Keyboard accessibility
@@ -141,7 +143,7 @@ export class DataAttrScanner {
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          this.callbacks.openModal(link, ns, prefill);
+          this.callbacks.openModal(link, ns, prefill, design);
         }
       });
     }

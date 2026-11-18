@@ -126,6 +126,38 @@ meetergo('init', {
 });
 ```
 
+### Design 2026 (opt-in)
+
+Every widget can render in the 2026 design: host photo, the next free time on
+the button, times one click away, phone bottom sheets. Without the flag every
+embed looks exactly as before ("classic" is the default).
+
+```js
+// whole namespace
+meetergo('init', { design: '2026', floatingButton: { link: '…', text: 'Termin buchen' } });
+
+// one widget (wins over the namespace); the modal uses ui.design
+meetergo('init', { floatingButton: { link: '…', design: '2026' }, ui: { design: '2026' } });
+```
+
+```html
+<!-- script tag or a single button -->
+<script async src="https://cdn.meetergo.com/v4/integration.js" data-meetergo-design="2026"></script>
+<button data-meetergo-link="…" data-meetergo-design="2026">Termin buchen</button>
+```
+
+Options read only in design 2026: `showNextSlot` (default `true`), `avatar`
+(`"host"` default, an image URL, or `false`), `subline` (override text) and, on
+`videoEmbed`, `captionsSrc` (WebVTT). Host, meeting type and next times come
+from `GET <booking origin>/api/embed/link-card?link=&tz=&lang=`, fetched lazily
+(idle, hover, focus or visibility), cached per link for the page lifetime; if it
+fails the widgets render without photo and times. Default copy follows
+`prefill.locale`, then `<html lang>`, then the browser (de, en, fr, es, pl).
+Clicking a time opens the booking page with `?<slotParam>=<ISO start>` when the
+booking page supports preselection. Try it in `test-design-2026.html`
+(mocked link card) after `npm run build-v4`; browser smoke test:
+`node scripts/smoke-design-2026.mjs`.
+
 ### Prefill
 
 Pass user data to pre-fill booking forms:

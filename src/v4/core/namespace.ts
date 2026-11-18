@@ -31,6 +31,11 @@ import { InlineEmbedManager } from "../modules/inline-embed.js";
 import { cssInjector, injectAllBaseStyles } from "../utils/css-injector.js";
 import { domCache } from "../utils/dom-cache.js";
 import { errorHandler } from "../utils/error-handler.js";
+import { resolveDesign, scriptTagDesign } from "../design/resolve.js";
+import { FloatingButton2026 } from "../design/floating-2026.js";
+import { Sidebar2026Manager } from "../design/sidebar-2026.js";
+import { Video2026Manager } from "../design/video-2026.js";
+import { Modal2026Manager } from "../design/modal-2026.js";
 
 import type {
   NamespaceConfig,
@@ -43,6 +48,7 @@ import type {
   WildcardHandler,
   NamespaceHandle,
   MeetergoEventName,
+  WidgetDesign,
 } from "../types/index.js";
 
 export class MeetergoNamespace {
@@ -53,9 +59,14 @@ export class MeetergoNamespace {
   private prerender: PrerenderManager | null;
 
   private modal: ModalManager;
-  private sidebar: SidebarManager;
-  private video: VideoEmbedManager;
-  private floatingBtn: FloatingButton;
+  private sidebar: SidebarManager | Sidebar2026Manager;
+  private video: VideoEmbedManager | Video2026Manager;
+  private floatingBtn: FloatingButton | FloatingButton2026;
+  /** Lazily created when a 2026 modal is first needed */
+  private modal2026: Modal2026Manager | null = null;
+  /** Namespace-level design (init `design`, else the script tag, else classic) */
+  private readonly design: WidgetDesign;
+  private modalDesign: WidgetDesign;
   private formListener: FormListenerManager;
   private inlineEmbed: InlineEmbedManager;
 
@@ -72,13 +83,25 @@ export class MeetergoNamespace {
         ? new PrerenderManager(id, typeof config.prerender === "object" ? config.prerender : {}, this.config)
         : null;
 
+    // Design: per widget > namespace > script tag > "classic"
+    this.design = resolveDesign(config.design, scriptTagDesign());
+    this.modalDesign = resolveDesign(config.ui?.design, this.design);
+    const locale = config.prefill?.locale;
+    const openModal = (link: string) => this.modalFor().openWithLink(link);
+
     // Modules
     this.modal = new ModalManager(id, this.bus, this.config, this.prerender);
-    this.sidebar = new SidebarManager(id, this.bus, this.config);
-    this.video = new VideoEmbedManager(id, this.bus, (link) => this.modal.openWithLink(link));
-    this.floatingBtn = new FloatingButton(id, (link) => this.modal.openWithLink(link));
+    this.sidebar = resolveDesign(config.sidebar?.design, this.design) === "2026"
+      ? new Sidebar2026Manager(id, this.bus, this.config, locale)
+      : new SidebarManager(id, this.bus, this.config);
+    this.video = resolveDesign(config.videoEmbed?.design, this.design) === "2026"
+      ? new Video2026Manager(id, this.bus, openModal, locale)
+      : new VideoEmbedManager(id, this.bus, (link) => this.modal.openWithLink(link));
+    this.floatingBtn = resolveDesign(config.floatingButton?.design, this.design) === "2026"
+      ? new FloatingButton2026(id, openModal, locale)
+      : new FloatingButton(id, (link) => this.modal.openWithLink(link));
     this.formListener = new FormListenerManager(id, (link, prefill) =>
-      this.modal.openWithLink(link, prefill)
+      this.modalFor().openWithLink(link, prefill)
     );
     this.inlineEmbed = new InlineEmbedManager(id, this.bus, this.config);
 
@@ -144,18 +167,39 @@ export class MeetergoNamespace {
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  openModal(link: string, params: Record<string, string> = {}): void {
+  /**
+   * @param design per-call design (e.g. data-meetergo-design on the clicked
+   *               element); falls back to the namespace's modal design.
+   */
+  openModal(link: string, params: Record<string, string> = {}, design?: WidgetDesign): void {
     this.assertAlive();
-    this.modal.openWithLink(link, params);
+    this.modalFor(design).openWithLink(link, params);
   }
 
   closeModal(): void {
     this.assertAlive();
     this.modal.closeModal();
+    if (this.modal2026?.isOpen()) this.modal2026.closeModal();
   }
 
   isModalOpen(): boolean {
-    return this.modal.isOpen();
+    return this.modal.isOpen() || !!this.modal2026?.isOpen();
+  }
+
+  /** The modal to open for a design; the other one is closed first. */
+  private modalFor(design?: WidgetDesign): ModalManager {
+    if (resolveDesign(design, this.modalDesign) !== "2026") {
+      if (this.modal2026?.isOpen()) this.modal2026.closeModal();
+      return this.modal;
+    }
+    if (!this.modal2026) {
+      const c = this.config;
+      const brand = c.ui?.cssVars?.["--mg-brand"] ?? c.floatingButton?.backgroundColor ?? c.sidebar?.backgroundColor ?? c.videoEmbed?.buttonColor;
+      const avatar = c.floatingButton?.avatar ?? c.sidebar?.avatar ?? "host";
+      this.modal2026 = new Modal2026Manager(this.id, this.bus, c, this.prerender, brand, avatar);
+    }
+    if (this.modal.isOpen()) this.modal.closeModal();
+    return this.modal2026;
   }
 
   toggleSidebar(position: SidebarPosition = "right"): void {
@@ -240,6 +284,7 @@ export class MeetergoNamespace {
     this.destroyed = true;
 
     this.modal.destroy();
+    this.modal2026?.destroy();
     this.sidebar.destroy();
     this.video.destroy();
     this.floatingBtn.destroy();
@@ -259,6 +304,10 @@ export class MeetergoNamespace {
 
   private applyUiConfig(config?: UiConfig): void {
     if (!config) return;
+
+    if (config.design) {
+      this.modalDesign = resolveDesign(config.design, this.design);
+    }
 
     if (config.cssVars) {
       cssInjector.applyTheme(config.cssVars, this.id);

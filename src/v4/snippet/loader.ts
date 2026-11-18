@@ -14,7 +14,7 @@
  *     w.meetergo=w.meetergo||function(){(w.meetergo.q=w.meetergo.q||[]).push(arguments)};
  *     w.meetergo.version='4';
  *     var e=d.createElement(s);e.async=1;
- *     e.src='https://cdn.meetergo.com/v4/browser.js';
+ *     e.src='https://cdn.meetergo.com/v4/integration.js';
  *     d.head.appendChild(e);
  *   })(window,document,'script');
  *
@@ -30,12 +30,12 @@
  *   3. Replaces window.meetergo with the real callable
  */
 
-export const LOADER_SNIPPET = `(function(w,d,s,u){w.meetergo=w.meetergo||function(){(w.meetergo.q=w.meetergo.q||[]).push(arguments)};w.meetergo.version='4';var e=d.createElement(s);e.async=1;e.src=u;d.head.appendChild(e);})(window,document,'script','https://cdn.meetergo.com/v4/browser.js');`;
+export const LOADER_SNIPPET = `(function(w,d,s,u){w.meetergo=w.meetergo||function(){(w.meetergo.q=w.meetergo.q||[]).push(arguments)};w.meetergo.version='4';var e=d.createElement(s);e.async=1;e.src=u;d.head.appendChild(e);})(window,document,'script','https://cdn.meetergo.com/v4/integration.js');`;
 
 /**
  * Generate the full snippet for a given CDN URL.
  * Can be used server-side to inject the correct URL into HTML templates.
  */
-export function generateLoaderSnippet(cdnUrl = "https://cdn.meetergo.com/v4/browser.js"): string {
+export function generateLoaderSnippet(cdnUrl = "https://cdn.meetergo.com/v4/integration.js"): string {
   return `(function(w,d,s,u){w.meetergo=w.meetergo||function(){(w.meetergo.q=w.meetergo.q||[]).push(arguments)};w.meetergo.version='4';var e=d.createElement(s);e.async=1;e.src=u;d.head.appendChild(e);})(window,document,'script','${cdnUrl}');`;
 }

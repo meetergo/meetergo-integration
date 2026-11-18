@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meetergo widgets: classic vs. 2026</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; background: #FAF8F4; color: #101623; }
+  .bar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #E3DED6; font-size: 13px; }
+  .bar label { display: inline-flex; gap: 6px; align-items: center; color: #4A5162; }
+  .bar select { font: inherit; padding: 4px 6px; border-radius: 8px; border: 1px solid #D2CBC0; background: #fff; }
+  .bar b { font-weight: 600; color: #101623; }
+  header.site { display: flex; justify-content: space-between; align-items: center; padding: 16px 26px; background: #fff; border-bottom: 1px solid #E3DED6; }
+  main { max-width: 980px; margin: 0 auto; padding: 40px 20px 160px; }
+  h1 { font-size: 34px; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 12px; }
+  p { color: #4A5162; max-width: 60ch; }
+  .own { display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 10px; border: 0; font: 500 15px system-ui; background: #101623; color: #fff; cursor: pointer; margin: 0 8px 8px 0; }
+  .note { background: #fff; border: 1px solid #E3DED6; border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #4A5162; margin: 24px 0; }
+  code { font: 12px ui-monospace, Menlo, monospace; background: #F3EFE8; padding: 1px 5px; border-radius: 5px; }
+  #log { position: fixed; left: 12px; bottom: 12px; z-index: 5; width: 260px; max-height: 180px; overflow: auto; background: #fff; border: 1px solid #E3DED6; border-radius: 12px; padding: 8px 10px; font: 12px ui-monospace, Menlo, monospace; color: #4A5162; }
+  #log div:first-child { color: #101623; font-weight: 600; }
+  /* a hostile customer stylesheet: the 2026 widgets must not be affected */
+  body.hostile button { font-family: "Comic Sans MS", cursive !important; letter-spacing: 3px !important; text-transform: uppercase !important; }
+  body.hostile div { line-height: 3 !important; }
+</style>
+<script>
+  // ── Controls via URL params (each change reloads, like a fresh customer page)
+  var P = new URLSearchParams(location.search);
+  var S = {
+    design: P.get("design") || "2026",
+    widget: P.get("widget") || "floating",
+    lang: P.get("lang") || "de",
+    brand: P.get("brand") || "#1A6EF4",
+    card: P.get("card") || "ok",
+    avatar: P.get("avatar") || "host",
+    next: P.get("next") || "on",
+    hostile: P.get("hostile") || "off",
+    dark: P.get("dark") || "off"
+  };
+  document.documentElement.lang = S.lang;
+  if (S.dark === "on") document.documentElement.style.colorScheme = "dark";
+
+  var LINK = "https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy";
+
+  // ── Mocked link-card endpoint (the real one is built in the app repo)
+  var AVATAR = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="#C9D8F5"/><circle cx="48" cy="38" r="18" fill="#7E93BF"/><rect x="18" y="62" width="60" height="40" rx="30" fill="#7E93BF"/></svg>');
+  function nextSlots() {
+    var out = [], d = new Date();
+    d.setMinutes(d.getMinutes() < 30 ? 30 : 60, 0, 0);
+    d.setTime(d.getTime() + 2 * 3600e3);
+    var perDay = {};
+    while (out.length < 9) {
+      var h = d.getHours(), key = d.toDateString(), wd = d.getDay();
+      if (wd !== 0 && wd !== 6 && h >= 8 && h < 18 && (perDay[key] || 0) < 3) {
+        out.push({ start: d.toISOString() });
+        perDay[key] = (perDay[key] || 0) + 1;
+        d.setTime(d.getTime() + 90 * 60e3);
+      } else {
+        d.setTime(d.getTime() + 30 * 60e3);
+      }
+    }
+    return out;
+  }
+  var realFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    var url = typeof input === "string" ? input : input.url;
+    if (url.indexOf("/api/embed/link-card") === -1) return realFetch(input, init);
+    console.log("[mock] link-card", url);
+    var body = {
+      host: { name: "Lena Hartmann", avatarUrl: AVATAR },
+      meetingType: { title: "Erstberatung", durationMinutes: 30, location: "video" },
+      nextSlots: S.card === "empty" ? [] : nextSlots(),
+      timezone: "Europe/Berlin",
+      slotParam: "slot"
+    };
+    if (S.card === "fail") return Promise.resolve(new Response("{}", { status: 500 }));
+    var res = function () { return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } }); };
+    return new Promise(function (r) { setTimeout(function () { r(res()); }, S.card === "slow" ? 4000 : 250); });
+  };
+
+  // captions for the video, as a blob URL
+  var VTT = URL.createObjectURL(new Blob(["WEBVTT\n\n00:00.000 --> 00:03.500\nHallo, ich bin Lena.\n\n00:03.500 --> 00:09.000\nIn 30 Minuten klären wir, ob sich ein Verfahren für dich lohnt.\n"], { type: "text/vtt" }));
+
+  // ── Loader snippet + init, exactly as a customer would paste it
+  (function (w, d, s, u) { w.meetergo = w.meetergo || function () { (w.meetergo.q = w.meetergo.q || []).push(arguments); }; w.meetergo.version = "4"; var e = d.createElement(s); e.async = 1; e.src = u; d.head.appendChild(e); })(window, document, "script", "dist/v4/browser.js");
+
+  var extra = {};
+  if (S.design === "2026") {
+    extra.showNextSlot = S.next === "on";
+    extra.avatar = S.avatar === "off" ? false : S.avatar === "url" ? AVATAR : "host";
+  }
+  var config = {
+    design: S.design,
+    onEvent: function (env) { var l = document.getElementById("log"); if (l) l.insertAdjacentHTML("beforeend", "<div>" + env.event + "</div>"); }
+  };
+  if (S.widget === "floating" || S.widget === "all") config.floatingButton = Object.assign({ link: LINK, text: "Termin buchen", backgroundColor: S.brand }, extra);
+  if (S.widget === "sidebar" || S.widget === "all") config.sidebar = Object.assign({ link: LINK, position: "right", buttonText: "Termin buchen", backgroundColor: S.brand }, extra);
+  if (S.widget === "video" || S.widget === "all") config.videoEmbed = Object.assign({
+    videoSrc: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    bookingLink: LINK, bookingCta: "Termin buchen", buttonColor: S.brand, captionsSrc: VTT,
+    position: S.widget === "all" ? "bottom-left" : "bottom-right"
+  }, extra);
+  if (S.widget === "modal") config.ui = { cssVars: { "--mg-brand": S.brand } };
+  meetergo("init", config);
+</script>
+</head>
+<body>
+  <div class="bar" id="bar"></div>
+  <header class="site"><b>Kanzlei Hartmann</b><span style="color:#4A5162;font-size:14px">Leistungen · Über uns · Kontakt</span></header>
+  <main>
+    <h1>Arbeitsrecht, verständlich erklärt</h1>
+    <p>Fiktive Kundenseite zum Testen der Website-Widgets. Oben Design, Widget, Sprache, Farbe und die Antwort des Link-Card-Endpunkts wählen (gemockt). Für die Handy-Ansicht das Fenster schmaler als 560 px ziehen oder die Geräte-Emulation der DevTools nutzen.</p>
+    <div id="modal-demo">
+      <button class="own" id="own-btn">Erstberatung buchen (openModal)</button>
+      <button class="own" data-meetergo-link="https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy" data-meetergo-design="2026">data-meetergo-design="2026"</button>
+      <button class="own" data-meetergo-link="https://cal.meetergo.com/technik/30-min-meeting-mit-airnergy" data-meetergo-design="classic">data-meetergo-design="classic"</button>
+    </div>
+    <div class="note">
+      Design <b id="d-design"></b>. Klassisch ist der Standard: ohne <code>design: "2026"</code> sieht jede Einbindung aus wie heute.
+      Mit <code>card=fail</code> antwortet der Endpunkt mit 500: Die Widgets erscheinen ohne Foto und Zeiten, ohne zu springen.
+      <code>card=slow</code> antwortet nach 4 s. Uhrzeiten erscheinen in der Zeitzone und Sprache des Browsers.
+    </div>
+    <p style="height:900px">Scrollbarer Inhalt …</p>
+  </main>
+  <div id="log"><div>Events</div></div>
+<script>
+  if (S.hostile === "on") document.body.classList.add("hostile");
+  document.getElementById("d-design").textContent = S.design;
+  document.getElementById("own-btn").addEventListener("click", function () { meetergo("openModal", { link: LINK }); });
+  var OPTS = {
+    design: ["2026", "classic"],
+    widget: ["floating", "sidebar", "modal", "video", "all"],
+    lang: ["de", "en", "fr", "es", "pl"],
+    brand: ["#1A6EF4", "#0F7B5F", "#101623", "#F2B33D"],
+    card: ["ok", "empty", "fail", "slow"],
+    avatar: ["host", "url", "off"],
+    next: ["on", "off"],
+    hostile: ["off", "on"],
+    dark: ["off", "on"]
+  };
+  var bar = document.getElementById("bar");
+  bar.insertAdjacentHTML("beforeend", "<b>meetergo widgets</b>");
+  Object.keys(OPTS).forEach(function (k) {
+    var lab = document.createElement("label");
+    lab.textContent = k + " ";
+    var sel = document.createElement("select");
+    sel.name = k;
+    OPTS[k].forEach(function (v) { var o = document.createElement("option"); o.value = o.textContent = v; if (S[k] === v) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener("change", function () { P.set(k, sel.value); location.search = P.toString(); });
+    lab.appendChild(sel);
+    bar.appendChild(lab);
+  });
+</script>
+</body>
+</html>

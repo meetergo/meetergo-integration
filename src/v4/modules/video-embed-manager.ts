@@ -10,6 +10,7 @@
  */
 
 import { errorHandler } from "../utils/error-handler.js";
+import { HLS_SRC } from "../utils/hls.js";
 import type { EventBus } from "../core/event-bus.js";
 import type { VideoEmbedConfig, Position } from "../types/index.js";
 
@@ -414,7 +415,7 @@ export class VideoEmbedManager {
     if (this.hlsLoaded || window.Hls) { this.hlsLoaded = true; return; }
     return new Promise((resolve) => {
       const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/hls.js@latest";
+      script.src = HLS_SRC;
       script.onload = () => { this.hlsLoaded = true; resolve(); };
       script.onerror = () => resolve();
       document.head.appendChild(script);
