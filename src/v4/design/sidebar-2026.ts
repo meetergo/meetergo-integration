@@ -7,21 +7,24 @@
  * (sidebarOpened / sidebarClosed) as the classic SidebarManager.
  */
 
-import { errorHandler } from "../utils/error-handler.js";
-import { bookingSrc, decorateIframe } from "../utils/iframe-factory.js";
 import type { NamespaceIframeOptions } from "../utils/iframe-factory.js";
 import type { EventBus } from "../core/event-bus.js";
 import type { SidebarConfig, SidebarPosition } from "../types/index.js";
-import { holdFocusInModal, ModalFocusHandle } from "../../utils/modal-focus.js";
+import type { ModalFocusHandle } from "../../utils/modal-focus.js";
+import { rt, Listeners } from "./runtime.js";
 import { copyFor, detectLang, visitorTimeZone } from "./i18n.js";
 import { fetchLinkCard, whenIdleOrEngaged } from "./link-card.js";
 import { Avatar, brandTokens, createShadowHost, el, HostHeader, ICONS, trapTab } from "./ui.js";
 
 const CSS = `
-.edge{position:fixed;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 8px 12px;border:0;background:var(--brand);color:var(--brand-fg);cursor:pointer;transition:padding .16s}
-.edge.right{right:0;border-radius:14px 0 0 14px}
-.edge.left{left:0;border-radius:0 14px 14px 0}
+.edock{position:fixed;pointer-events:auto}
+.edock.right{right:0}
+.edock.left{left:0}
+.edge{display:flex;flex-direction:column;align-items:center;padding:10px 8px 12px;border:0;background:var(--brand);color:var(--brand-fg);cursor:pointer;transition:padding .16s}
+.edge.right{border-radius:14px 0 0 14px}
+.edge.left{border-radius:0 14px 14px 0}
 .edge[aria-expanded="true"]{visibility:hidden}
+.edge>*+*{margin-top:8px}
 .edge.right:hover{padding-right:12px}
 .edge.left:hover{padding-left:12px}
 .edge .av{border:2px solid rgba(255,255,255,.9);background:rgba(255,255,255,.18);color:inherit}
@@ -46,8 +49,7 @@ interface Entry {
   sheet: HTMLElement;
   tab: HTMLButtonElement;
   close: HTMLButtonElement;
-  abort: AbortController;
-  stopIdle: () => void;
+  listeners: Listeners;
   focus: ModalFocusHandle | null;
 }
 
@@ -61,29 +63,36 @@ export class Sidebar2026Manager {
     private readonly locale?: string
   ) {}
 
+  /** Throws if the sidebar cannot be built; the namespace then renders the classic one. */
   create(config: SidebarConfig): void {
+    if (!config.link) {
+      rt.errorHandler.handleError({ message: "Sidebar requires a link", level: "warning", ns: this.ns });
+      return;
+    }
+    const position = config.position ?? "right";
+    this.remove(position);
+    const ls = new Listeners();
+    let host: HTMLElement | null = null;
     try {
-      if (!config.link) {
-        errorHandler.handleError({ message: "Sidebar requires a link", level: "warning", ns: this.ns });
-        return;
-      }
-      const position = config.position ?? "right";
-      this.remove(position);
 
       const lang = detectLang(this.locale);
       const copy = copyFor(lang);
       const label = config.buttonText || copy.book;
       const avatarOpt = config.avatar ?? "host";
-      const { host, root } = createShadowHost(`mg-${this.ns}-sidebar-2026-${position}`, CSS, 999995, brandTokens(config.backgroundColor, config.textColor));
-      const abort = new AbortController();
-      const sig = abort.signal;
+      const shadow = createShadowHost(`mg-${this.ns}-sidebar-2026-${position}`, CSS, 999995, brandTokens(config.backgroundColor, config.textColor));
+      host = shadow.host;
+      const root = shadow.root;
+      let alive = true;
+      ls.add(() => { alive = false; });
 
       // ── Edge tab
+      const edock = el("div", `edock ${position}`);
       const tab = el("button", `edge sh enter ${position}`, { type: "button", "aria-label": label, "aria-haspopup": "dialog", "aria-expanded": "false" });
       const btnPos = config.buttonPosition ?? "middle-right";
-      if (btnPos.includes("top")) tab.style.top = "120px";
-      else if (btnPos.includes("bottom")) tab.style.bottom = "120px";
-      else { tab.style.top = "50%"; tab.style.translate = "0 -50%"; }
+      if (btnPos.includes("top")) edock.style.top = "120px";
+      else if (btnPos.includes("bottom")) edock.style.bottom = "120px";
+      else { edock.style.top = "50%"; edock.style.transform = "translateY(-50%)"; }
+      edock.appendChild(tab);
       const tabAvatar = new Avatar(34, avatarOpt);
       if (avatarOpt !== false) tab.appendChild(tabAvatar.node);
       const icon = el("span", "", { "aria-hidden": "true" });
@@ -101,33 +110,37 @@ export class Sidebar2026Manager {
       const header = new HostHeader(40, avatarOpt, label, copy, titleId);
       header.close.style.marginLeft = "auto";
       const iframe = document.createElement("iframe");
-      iframe.src = bookingSrc(config.link, this.iframeOptions);
+      iframe.src = rt.bookingSrc(config.link, this.iframeOptions);
       iframe.title = "Meetergo booking sidebar";
       iframe.setAttribute("allow", "payment");
-      decorateIframe(iframe, this.iframeOptions);
+      rt.decorateIframe(iframe, this.iframeOptions);
       sheet.append(header.node, iframe);
       layer.append(scrim, sheet);
       layer.setAttribute("inert", "");
-      root.append(tab, layer);
+      root.append(edock, layer);
 
-      tab.addEventListener("click", () => this.toggle(position), { signal: sig });
-      header.close.addEventListener("click", () => this.close(position), { signal: sig });
-      scrim.addEventListener("click", () => this.close(position), { signal: sig });
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && this.isOpen(position)) this.close(position); }, { signal: sig });
-      trapTab(sheet, root, sig);
+      ls.on(tab, "click", () => this.toggle(position));
+      ls.on(header.close, "click", () => this.close(position));
+      ls.on(scrim, "click", () => this.close(position));
+      ls.on(document, "keydown", ((e: KeyboardEvent) => { if (e.key === "Escape" && this.isOpen(position)) this.close(position); }) as EventListener);
+      trapTab(sheet, root, ls);
 
-      const stopIdle = whenIdleOrEngaged(tab, () => {
-        fetchLinkCard(config.link, visitorTimeZone(), lang).then((card) => {
-          if (sig.aborted) return;
-          tabAvatar.update(card);
-          header.update(card);
-        });
-      });
+      ls.add(whenIdleOrEngaged(tab, () => {
+        fetchLinkCard(config.link, visitorTimeZone(), lang)
+          .then((card) => {
+            if (!alive) return;
+            tabAvatar.update(card);
+            header.update(card);
+          })
+          .catch(() => undefined);
+      }));
 
       document.body.appendChild(host);
-      this.entries.set(position, { host, layer, sheet, tab, close: header.close, abort, stopIdle, focus: null });
+      this.entries.set(position, { host, layer, sheet, tab, close: header.close, listeners: ls, focus: null });
     } catch (err) {
-      errorHandler.handleError({ message: "Failed to create sidebar", level: "error", ns: this.ns, error: err as Error });
+      ls.clear();
+      host?.parentNode?.removeChild(host);
+      throw err;
     }
   }
 
@@ -142,7 +155,7 @@ export class Sidebar2026Manager {
     e.layer.removeAttribute("inert");
     e.tab.setAttribute("aria-expanded", "true");
     e.tab.setAttribute("inert", "");
-    e.focus = holdFocusInModal(e.host, e.close);
+    e.focus = rt.holdFocusInModal(e.host, e.close);
     this.bus.emit("sidebarOpened", { position });
   }
 
@@ -169,8 +182,7 @@ export class Sidebar2026Manager {
     const e = this.entries.get(position);
     if (!e) return;
     e.focus?.release();
-    e.abort.abort();
-    e.stopIdle();
+    e.listeners.clear();
     e.host.parentNode?.removeChild(e.host);
     this.entries.delete(position);
   }

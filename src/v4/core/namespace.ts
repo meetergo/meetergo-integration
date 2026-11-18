@@ -32,10 +32,8 @@ import { cssInjector, injectAllBaseStyles } from "../utils/css-injector.js";
 import { domCache } from "../utils/dom-cache.js";
 import { errorHandler } from "../utils/error-handler.js";
 import { resolveDesign, scriptTagDesign } from "../design/resolve.js";
-import { FloatingButton2026 } from "../design/floating-2026.js";
-import { Sidebar2026Manager } from "../design/sidebar-2026.js";
-import { Video2026Manager } from "../design/video-2026.js";
-import { Modal2026Manager } from "../design/modal-2026.js";
+import { loadDesign, loadedDesign } from "../design/loader.js";
+import type { DesignApi } from "../design/entry.js";
 
 import type {
   NamespaceConfig,
@@ -51,6 +49,11 @@ import type {
   WidgetDesign,
 } from "../types/index.js";
 
+/** What every sidebar implementation offers the namespace. */
+interface SidebarLike { toggle(position?: SidebarPosition): void; destroy(): void; }
+/** What every floating button / video implementation offers the namespace. */
+interface Destroyable { destroy(): void; }
+
 export class MeetergoNamespace {
   readonly id: string;
 
@@ -59,14 +62,19 @@ export class MeetergoNamespace {
   private prerender: PrerenderManager | null;
 
   private modal: ModalManager;
-  private sidebar: SidebarManager | Sidebar2026Manager;
-  private video: VideoEmbedManager | Video2026Manager;
-  private floatingBtn: FloatingButton | FloatingButton2026;
-  /** Lazily created when a 2026 modal is first needed */
-  private modal2026: Modal2026Manager | null = null;
-  /** Namespace-level design (init `design`, else the script tag, else classic) */
+  private sidebar: SidebarManager;
+  private video: VideoEmbedManager;
+  private floatingBtn: FloatingButton;
+
+  // ── Design 2026 (opt-in; the code lives in a lazily loaded chunk) ─────────
+  /** Namespace-level design: init `design`, else the script tag, else classic */
   private readonly design: WidgetDesign;
   private modalDesign: WidgetDesign;
+  private modal2026: ModalManager | null = null;
+  private modal2026Failed = false;
+  private sidebar2026: SidebarLike | null = null;
+  private video2026: Destroyable | null = null;
+  private floating2026: Destroyable | null = null;
   private formListener: FormListenerManager;
   private inlineEmbed: InlineEmbedManager;
 
@@ -77,31 +85,23 @@ export class MeetergoNamespace {
     this.config = { ns: id, ...config };
     this.bus = new EventBus(id);
 
+    // Design: per widget > namespace > script tag > "classic"
+    this.design = resolveDesign(config.design, scriptTagDesign());
+    this.modalDesign = resolveDesign(config.ui?.design, this.design);
+
     // Prerender manager (disabled if config.prerender === false)
     this.prerender =
       config.prerender !== false
         ? new PrerenderManager(id, typeof config.prerender === "object" ? config.prerender : {}, this.config)
         : null;
 
-    // Design: per widget > namespace > script tag > "classic"
-    this.design = resolveDesign(config.design, scriptTagDesign());
-    this.modalDesign = resolveDesign(config.ui?.design, this.design);
-    const locale = config.prefill?.locale;
-    const openModal = (link: string) => this.modalFor().openWithLink(link);
-
     // Modules
     this.modal = new ModalManager(id, this.bus, this.config, this.prerender);
-    this.sidebar = resolveDesign(config.sidebar?.design, this.design) === "2026"
-      ? new Sidebar2026Manager(id, this.bus, this.config, locale)
-      : new SidebarManager(id, this.bus, this.config);
-    this.video = resolveDesign(config.videoEmbed?.design, this.design) === "2026"
-      ? new Video2026Manager(id, this.bus, openModal, locale)
-      : new VideoEmbedManager(id, this.bus, (link) => this.modal.openWithLink(link));
-    this.floatingBtn = resolveDesign(config.floatingButton?.design, this.design) === "2026"
-      ? new FloatingButton2026(id, openModal, locale)
-      : new FloatingButton(id, (link) => this.modal.openWithLink(link));
+    this.sidebar = new SidebarManager(id, this.bus, this.config);
+    this.video = new VideoEmbedManager(id, this.bus, (link) => this.modal.openWithLink(link));
+    this.floatingBtn = new FloatingButton(id, (link) => this.modal.openWithLink(link));
     this.formListener = new FormListenerManager(id, (link, prefill) =>
-      this.modalFor().openWithLink(link, prefill)
+      this.withModal(undefined, (m) => m.openWithLink(link, prefill))
     );
     this.inlineEmbed = new InlineEmbedManager(id, this.bus, this.config);
 
@@ -130,19 +130,52 @@ export class MeetergoNamespace {
       );
     }
 
+    const fb = this.config.floatingButton;
+    const sb = this.config.sidebar;
+    const ve = this.config.videoEmbed;
+    const locale = this.config.prefill?.locale;
+    const open2026 = (link: string) => this.withModal(undefined, (m) => m.openWithLink(link));
+
+    // Start fetching the design chunk early if anything here uses it
+    if (this.modalDesign === "2026") loadDesign().catch(() => undefined);
+
     // Floating button
-    if (this.config.floatingButton) {
-      this.floatingBtn.create(this.config.floatingButton);
+    if (fb) {
+      if (resolveDesign(fb.design, this.design) === "2026") {
+        this.with2026("floating button", (api) => {
+          const w = new api.FloatingButton2026(this.id, open2026, locale);
+          this.floating2026 = w;
+          w.create(fb);
+        }, () => this.floatingBtn.create(fb));
+      } else {
+        this.floatingBtn.create(fb);
+      }
     }
 
     // Sidebar
-    if (this.config.sidebar) {
-      this.sidebar.create(this.config.sidebar);
+    if (sb) {
+      if (resolveDesign(sb.design, this.design) === "2026") {
+        this.with2026("sidebar", (api) => {
+          const w = new api.Sidebar2026Manager(this.id, this.bus, this.config, locale);
+          this.sidebar2026 = w;
+          w.create(sb);
+        }, () => this.sidebar.create(sb));
+      } else {
+        this.sidebar.create(sb);
+      }
     }
 
     // Video embed
-    if (this.config.videoEmbed) {
-      this.video.create(this.config.videoEmbed).catch(console.error);
+    if (ve) {
+      if (resolveDesign(ve.design, this.design) === "2026") {
+        this.with2026("video", (api) => {
+          const w = new api.Video2026Manager(this.id, this.bus, open2026, locale);
+          this.video2026 = w;
+          return w.create(ve);
+        }, () => { this.video.create(ve).catch(console.error); });
+      } else {
+        this.video.create(ve).catch(console.error);
+      }
     }
 
     // Form listeners
@@ -173,7 +206,7 @@ export class MeetergoNamespace {
    */
   openModal(link: string, params: Record<string, string> = {}, design?: WidgetDesign): void {
     this.assertAlive();
-    this.modalFor(design).openWithLink(link, params);
+    this.withModal(design, (m) => m.openWithLink(link, params));
   }
 
   closeModal(): void {
@@ -186,25 +219,9 @@ export class MeetergoNamespace {
     return this.modal.isOpen() || !!this.modal2026?.isOpen();
   }
 
-  /** The modal to open for a design; the other one is closed first. */
-  private modalFor(design?: WidgetDesign): ModalManager {
-    if (resolveDesign(design, this.modalDesign) !== "2026") {
-      if (this.modal2026?.isOpen()) this.modal2026.closeModal();
-      return this.modal;
-    }
-    if (!this.modal2026) {
-      const c = this.config;
-      const brand = c.ui?.cssVars?.["--mg-brand"] ?? c.floatingButton?.backgroundColor ?? c.sidebar?.backgroundColor ?? c.videoEmbed?.buttonColor;
-      const avatar = c.floatingButton?.avatar ?? c.sidebar?.avatar ?? "host";
-      this.modal2026 = new Modal2026Manager(this.id, this.bus, c, this.prerender, brand, avatar);
-    }
-    if (this.modal.isOpen()) this.modal.closeModal();
-    return this.modal2026;
-  }
-
   toggleSidebar(position: SidebarPosition = "right"): void {
     this.assertAlive();
-    this.sidebar.toggle(position);
+    (this.sidebar2026 ?? this.sidebar).toggle(position);
   }
 
   on<E extends MeetergoEvent>(
@@ -284,10 +301,13 @@ export class MeetergoNamespace {
     this.destroyed = true;
 
     this.modal.destroy();
-    this.modal2026?.destroy();
     this.sidebar.destroy();
     this.video.destroy();
     this.floatingBtn.destroy();
+    this.modal2026?.destroy();
+    this.sidebar2026?.destroy();
+    this.video2026?.destroy();
+    this.floating2026?.destroy();
     this.formListener.destroy();
     this.inlineEmbed.destroy();
     this.prerender?.destroy();
@@ -301,6 +321,76 @@ export class MeetergoNamespace {
   }
 
   // ── Private ───────────────────────────────────────────────────────────────
+
+  // ── Design 2026 plumbing ──────────────────────────────────────────────────
+
+  /**
+   * Build a 2026 widget once the design chunk is available. If the chunk
+   * cannot be loaded, or building throws (or its promise rejects), the
+   * classic widget is rendered instead, so the embed never breaks.
+   */
+  private with2026(name: string, build: (api: DesignApi) => void | Promise<void>, classic: () => void): void {
+    const fallback = (err?: unknown) => {
+      if (this.destroyed) return;
+      errorHandler.handleError({ message: `Design 2026 ${name} failed; showing the classic design`, level: "warning", ns: this.id, error: err as Error });
+      classic();
+    };
+    const run = (api: DesignApi) => {
+      if (this.destroyed) return;
+      try {
+        const result = build(api);
+        if (result && typeof result.then === "function") result.catch(fallback);
+      } catch (err) {
+        fallback(err);
+      }
+    };
+    const api = loadedDesign();
+    if (api) run(api);
+    else loadDesign().then(run, fallback);
+  }
+
+  /**
+   * Run `fn` with the modal for a design. The 2026 modal comes from the design
+   * chunk; while it loads the call waits, and if it cannot be loaded or built
+   * the classic modal opens instead. The other modal is closed first.
+   */
+  private withModal(design: WidgetDesign | undefined, fn: (modal: ModalManager) => void): void {
+    if (resolveDesign(design, this.modalDesign) !== "2026" || this.modal2026Failed) {
+      if (this.modal2026?.isOpen()) this.modal2026.closeModal();
+      fn(this.modal);
+      return;
+    }
+    const use = () => {
+      if (this.destroyed) return;
+      const m = this.getModal2026() ?? this.modal;
+      if (m !== this.modal && this.modal.isOpen()) this.modal.closeModal();
+      if (m === this.modal && this.modal2026?.isOpen()) this.modal2026.closeModal();
+      fn(m);
+    };
+    if (this.modal2026 || loadedDesign()) use();
+    else loadDesign().then(use, () => { this.modal2026Failed = true; use(); });
+  }
+
+  private getModal2026(): ModalManager | null {
+    if (this.modal2026) return this.modal2026;
+    const api = loadedDesign();
+    if (!api || this.modal2026Failed) return null;
+    let m: ModalManager | null = null;
+    try {
+      const c = this.config;
+      const brand = c.ui?.cssVars?.["--mg-brand"] ?? c.floatingButton?.backgroundColor ?? c.sidebar?.backgroundColor ?? c.videoEmbed?.buttonColor;
+      const avatar = c.floatingButton?.avatar ?? c.sidebar?.avatar ?? "host";
+      m = new api.Modal2026(this.id, this.bus, c, this.prerender, brand, avatar);
+      m.initialize(); // builds the shadow DOM; throws where that is unsupported
+      this.modal2026 = m;
+      return m;
+    } catch (err) {
+      try { m?.destroy(); } catch { /* nothing to clean */ }
+      this.modal2026Failed = true;
+      errorHandler.handleError({ message: "Design 2026 modal failed; using the classic modal", level: "warning", ns: this.id, error: err as Error });
+      return null;
+    }
+  }
 
   private applyUiConfig(config?: UiConfig): void {
     if (!config) return;

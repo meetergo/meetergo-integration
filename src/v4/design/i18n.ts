@@ -122,9 +122,18 @@ export interface SlotDay {
   times: Array<{ iso: string; label: string }>;
 }
 
-function ymd(date: Date, tz: string): string {
-  // en-CA formats as YYYY-MM-DD
-  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+const ymdFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** YYYY-MM-DD of `date` in `tz`, built from parts (not from a locale's string format). */
+export function ymd(date: Date, tz: string): string {
+  let f = ymdFormats.get(tz);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+    ymdFormats.set(tz, f);
+  }
+  const parts: Record<string, string> = {};
+  for (const p of f.formatToParts(date)) parts[p.type] = p.value;
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function dayDiff(a: string, b: string): number {
@@ -147,12 +156,21 @@ export function groupSlots(
   maxDays = 3,
   perDay = 3
 ): SlotDay[] {
+  try {
+    return group(starts, lang, tz, now, maxDays, perDay);
+  } catch {
+    // e.g. an unknown time zone in an old browser: render without times
+    return [];
+  }
+}
+
+function group(starts: string[], lang: Lang, tz: string, now: Date, maxDays: number, perDay: number): SlotDay[] {
   const c = COPY[lang];
   const todayKey = ymd(now, tz);
   const days: SlotDay[] = [];
   const sorted = starts
     .map((s) => ({ iso: s, date: new Date(s) }))
-    .filter((s) => !isNaN(s.date.getTime()) && s.date.getTime() >= now.getTime() - 60_000)
+    .filter((s) => !isNaN(s.date.getTime()) && s.date.getTime() > now.getTime())
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   for (const s of sorted) {

@@ -153,10 +153,21 @@ from `GET <booking origin>/api/embed/link-card?link=&tz=&lang=`, fetched lazily
 (idle, hover, focus or visibility), cached per link for the page lifetime; if it
 fails the widgets render without photo and times. Default copy follows
 `prefill.locale`, then `<html lang>`, then the browser (de, en, fr, es, pl).
-Clicking a time opens the booking page with `?<slotParam>=<ISO start>` when the
-booking page supports preselection. Try it in `test-design-2026.html`
-(mocked link card) after `npm run build-v4`; browser smoke test:
-`node scripts/smoke-design-2026.mjs`.
+Clicking a time opens the booking page with `?<slotParam>=<ISO start>` (merged
+with the link's own params) when the link card names a `slotParam`. When it is
+`null` (the booking page cannot preselect a slot), clicking a time opens the
+plain booking link, and the visitor picks the time again there.
+
+The 2026 code is not in `integration.js`: it ships as a content-hashed chunk
+(`design-2026.<hash>.js`, same CDN directory as the script) that is loaded only
+when a widget resolves to design "2026". Classic pages never request it. If the
+chunk, shadow DOM or anything in the 2026 setup fails, the classic widget is
+rendered instead. `npm run build-v4` builds both; `scripts/deploy-cdn.sh`
+uploads the chunk before `integration.js`, snapshots the live entry points for
+rollback (`scripts/deploy-cdn.sh --rollback <timestamp>`), then verifies.
+
+Try it in `test-design-2026.html` (mocked link card) after `npm run build-v4`;
+browser smoke test: `node scripts/smoke-design-2026.mjs`.
 
 ### Prefill
 

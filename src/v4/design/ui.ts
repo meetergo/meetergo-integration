@@ -10,6 +10,7 @@
 import { brandTokens, BrandTokens } from "./color.js";
 import type { Copy } from "./i18n.js";
 import type { LinkCard } from "./link-card.js";
+import type { Listeners } from "./runtime.js";
 
 export type DesignName = "2026" | "classic";
 
@@ -17,7 +18,7 @@ const SANS = `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helv
 const MONO = `ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace`;
 
 export const BASE_CSS = `
-:host{all:initial;position:fixed;inset:0;pointer-events:none;color-scheme:light;font:15px/1.5 ${SANS};color:#101623;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-align:left;direction:ltr}
+:host{all:initial;position:fixed;top:0;left:0;pointer-events:none;color-scheme:light;font:15px/1.5 ${SANS};color:#101623;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-align:left;direction:ltr}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;margin:0;letter-spacing:normal;text-transform:none}
@@ -47,7 +48,7 @@ svg{display:block;flex:none}
 .powered{font:500 11px/1.3 ${MONO};color:#8C93A1;text-align:center;text-decoration:none}
 .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;padding:0;margin:-1px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--brand-text);outline-offset:2px}
-.scrim{position:fixed;inset:0;background:rgba(16,22,35,.28);pointer-events:auto;animation:mgFade .2s both}
+.scrim{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(16,22,35,.28);pointer-events:auto;animation:mgFade .2s both}
 .enter{animation:mgIn .26s cubic-bezier(.2,.8,.2,1) both}
 .spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--brand-soft);border-top-color:var(--brand);animation:mgSpin .8s linear infinite}
 @keyframes mgIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
@@ -76,7 +77,7 @@ export function createShadowHost(id: string, css: string, zIndex: number, brand:
   host.id = id;
   host.setAttribute("data-meetergo-design", "2026");
   // Inline so the host page cannot override position/stacking
-  host.style.cssText = `position:fixed;inset:0;width:0;height:0;overflow:visible;z-index:${zIndex};pointer-events:none;`;
+  host.style.cssText = `position:fixed;top:0;left:0;width:0;height:0;overflow:visible;z-index:${zIndex};pointer-events:none;`;
   const root = host.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = `${BASE_CSS}${css}:host{--brand:${brand.brand};--brand-fg:${brand.fg};--brand-soft:${brand.soft};--brand-text:${brand.text};z-index:${zIndex}}`;
@@ -210,8 +211,8 @@ function visible(e: HTMLElement): boolean {
 }
 
 /** Keep Tab / Shift+Tab cycling inside `container` (a shadow-root subtree). */
-export function trapTab(container: HTMLElement, root: ShadowRoot, signal: AbortSignal): void {
-  container.addEventListener("keydown", (e: KeyboardEvent) => {
+export function trapTab(container: HTMLElement, root: ShadowRoot, listeners: Listeners): void {
+  listeners.on(container, "keydown", ((e: KeyboardEvent) => {
     if (e.key !== "Tab") return;
     const items = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(visible);
     if (!items.length) return;
@@ -224,7 +225,22 @@ export function trapTab(container: HTMLElement, root: ShadowRoot, signal: AbortS
       e.preventDefault();
       first.focus();
     }
-  }, { signal });
+  }) as EventListener);
+}
+
+/**
+ * Call `fn` when the tab becomes visible again and once a minute, so
+ * time-relative copy ("Heute frei ab 14:30") never goes stale. Returns cleanup.
+ */
+export function watchClock(fn: () => void): () => void {
+  const safe = () => { try { fn(); } catch { /* keep the widget as is */ } };
+  const onVis = () => { if (document.visibilityState === "visible") safe(); };
+  document.addEventListener("visibilitychange", onVis);
+  const id = setInterval(safe, 60_000);
+  return () => {
+    document.removeEventListener("visibilitychange", onVis);
+    clearInterval(id);
+  };
 }
 
 export function prefersReducedMotion(): boolean {
@@ -246,6 +262,7 @@ export function dockStyle(position: string, offset: string): Record<string, stri
   if (col === "left") s.left = offset;
   else if (col === "center") { s.left = "50%"; tx = "-50%"; }
   else s.right = offset;
-  if (tx !== "0" || ty !== "0") s.translate = `${tx} ${ty}`;
+  // `transform`, not the `translate` property (Safari < 14.1)
+  if (tx !== "0" || ty !== "0") s.transform = `translate(${tx}, ${ty})`;
   return s;
 }

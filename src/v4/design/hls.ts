@@ -2,7 +2,7 @@
  * hls.js for .m3u8 sources, loaded on demand. Pinned to an exact release so a
  * new upstream version can never change customer pages without a release here.
  */
-export const HLS_SRC = "https://cdn.jsdelivr.net/npm/hls.js@1.6.19/dist/hls.min.js";
+export const HLS_SRC = "https://cdn.jsdelivr.net/npm/hls.js@1.7.4/dist/hls.min.js";
 
 let pending: Promise<void> | null = null;
 
@@ -18,4 +18,9 @@ export function loadHls(): Promise<void> {
     });
   }
   return pending;
+}
+
+/** Test hook */
+export function resetHls(): void {
+  pending = null;
 }

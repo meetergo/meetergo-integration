@@ -1,6 +1,8 @@
+import "../design/entry"; // registers the design chunk, as if it had been loaded
 import { MeetergoSDK } from "../core/sdk";
 import { clearLinkCardCache } from "../design/link-card";
 import { resetScriptDesign } from "../design/resolve";
+import { resetHls } from "../design/hls";
 
 const LINK = "https://cal.meetergo.com/lena/erstberatung";
 
@@ -430,5 +432,112 @@ describe("video bubble + card (2026)", () => {
     expect(q(root, ".cap").hidden).toBe(true);
     q<HTMLButtonElement>(root, ".dismiss").click();
     expect(document.querySelector('[id^="mg-video-default-"]')).toBeNull();
+  });
+});
+
+describe("safety fallbacks to classic", () => {
+  it("modal: if shadow DOM throws, the classic modal opens", () => {
+    const orig = HTMLElement.prototype.attachShadow;
+    HTMLElement.prototype.attachShadow = () => { throw new Error("no shadow DOM"); };
+    try {
+      const { callable } = sdkWith({ design: "2026", prerender: false });
+      callable("openModal", { link: LINK });
+      expect(document.getElementById("mg-default-modal")?.style.visibility).toBe("visible");
+      expect(document.getElementById("mg-default-modal-2026")).toBeNull();
+    } finally {
+      HTMLElement.prototype.attachShadow = orig;
+    }
+  });
+
+  it("floating button, sidebar and video render classic when the 2026 build throws", async () => {
+    const orig = HTMLElement.prototype.attachShadow;
+    HTMLElement.prototype.attachShadow = () => { throw new Error("no shadow DOM"); };
+    try {
+      sdkWith({ design: "2026", prerender: false, floatingButton: { link: LINK, text: "Termin" }, sidebar: { link: LINK }, videoEmbed: { videoSrc: "https://cdn.example.com/v.mp4", bookingLink: LINK } });
+      await flush();
+      expect(document.getElementById("mg-default-float-btn")?.className).toBe("mg-float-button");
+      expect(document.querySelector(".mg-sidebar-toggle")).not.toBeNull();
+      expect(document.querySelector('[id^="mg-video-default-"]')?.shadowRoot).toBeNull();
+      expect(document.querySelector("[data-meetergo-design]")).toBeNull();
+    } finally {
+      HTMLElement.prototype.attachShadow = orig;
+    }
+  });
+
+  it("2026 widgets never pass the `signal` option (Safari < 15) and clean up their listeners", () => {
+    const spyAdd = jest.spyOn(EventTarget.prototype, "addEventListener");
+    const spyRemove = jest.spyOn(EventTarget.prototype, "removeEventListener");
+    const { callable } = sdkWith({ design: "2026", prerender: false, floatingButton: { link: LINK }, sidebar: { link: LINK } });
+    callable("openModal", { link: LINK });
+    const withSignal = spyAdd.mock.calls.filter((c) => c[2] && typeof c[2] === "object" && "signal" in (c[2] as object));
+    const docAdds = spyAdd.mock.calls.filter((c) => c[0] === "pointerdown").length;
+    spyAdd.mockRestore();
+    expect(withSignal).toEqual([]);
+    callable("destroy");
+    expect(spyRemove.mock.calls.filter((c) => c[0] === "pointerdown").length).toBeGreaterThanOrEqual(docAdds);
+    expect(spyRemove.mock.calls.some((c) => c[0] === "visibilitychange")).toBe(true);
+    spyRemove.mockRestore();
+  });
+});
+
+describe("time-relative copy stays fresh", () => {
+  afterEach(() => jest.useRealTimers());
+
+  it("drops past times and moves 'Heute' on when the tab comes back", async () => {
+    jest.useFakeTimers("modern");
+    jest.setSystemTime(new Date("2026-11-18T09:00:00Z")); // Wed 10:00 Berlin
+    respondWith(card({ nextSlots: [{ start: "2026-11-18T13:30:00Z" }, { start: "2026-11-19T08:00:00Z" }] }));
+    sdkWith({ design: "2026", floatingButton: { link: LINK } });
+    const root = shadowOf("mg-default-float-btn");
+    engage(q(root, ".pill"));
+    await flush();
+    expect(q(root, ".pill .s").textContent).toBe("Heute frei ab 14:30");
+
+    // the visitor comes back late in the evening
+    jest.setSystemTime(new Date("2026-11-18T20:00:00Z"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(q(root, ".pill .s").textContent).toBe("Morgen frei ab 09:00");
+
+    // next morning, via the minute check
+    jest.setSystemTime(new Date("2026-11-19T06:00:00Z"));
+    jest.advanceTimersByTime(60_000);
+    expect(q(root, ".pill .s").textContent).toBe("Heute frei ab 09:00");
+
+    // all times passed: no sub-line, the pill opens the modal
+    jest.setSystemTime(new Date("2026-11-19T09:00:00Z"));
+    jest.advanceTimersByTime(60_000);
+    expect(q(root, ".pill .s").hidden).toBe(true);
+  });
+});
+
+describe("video hls (2026)", () => {
+  beforeEach(() => resetHls());
+  afterEach(() => { delete (window as unknown as { Hls?: unknown }).Hls; });
+
+  it("loads the pinned hls.js, attaches once loaded, destroys the instance on destroy", async () => {
+    const instance = { loadSource: jest.fn(), attachMedia: jest.fn(), on: jest.fn(), destroy: jest.fn() };
+    const { callable } = sdkWith({ design: "2026", prerender: false, videoEmbed: { videoSrc: "https://v.example.com/a.m3u8", bookingLink: LINK } });
+    await flush();
+    const s = document.head.querySelector('script[src*="hls.js"]') as HTMLScriptElement;
+    expect(s.src).toBe("https://cdn.jsdelivr.net/npm/hls.js@1.7.4/dist/hls.min.js");
+    (window as unknown as { Hls: unknown }).Hls = Object.assign(function () { return instance; }, { isSupported: () => true, Events: { ERROR: "e", MANIFEST_PARSED: "m" } });
+    s.onload?.(new Event("load"));
+    await flush();
+    expect(instance.attachMedia).toHaveBeenCalledTimes(1);
+    callable("destroy");
+    expect(instance.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not attach when destroyed while hls.js was loading", async () => {
+    const instance = { loadSource: jest.fn(), attachMedia: jest.fn(), on: jest.fn(), destroy: jest.fn() };
+    const { callable } = sdkWith({ design: "2026", prerender: false, videoEmbed: { videoSrc: "https://v.example.com/b.m3u8", bookingLink: LINK } });
+    await flush();
+    callable("destroy");
+    (window as unknown as { Hls: unknown }).Hls = Object.assign(function () { return instance; }, { isSupported: () => true, Events: { ERROR: "e", MANIFEST_PARSED: "m" } });
+    const s = document.head.querySelector('script[src*="hls.js"]') as HTMLScriptElement;
+    expect(s).not.toBeNull();
+    s.onload?.(new Event("load"));
+    await flush();
+    expect(instance.attachMedia).not.toHaveBeenCalled();
   });
 });

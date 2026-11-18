@@ -8,40 +8,43 @@
  * as the classic widget (videoExpanded, videoMinimized, videoPlay, videoPause).
  */
 
-import { errorHandler } from "../utils/error-handler.js";
-import { loadHls } from "../utils/hls.js";
+import { loadHls } from "./hls.js";
+import { rt, Listeners } from "./runtime.js";
+import type { HlsInstance } from "../types/index.js";
 import type { EventBus } from "../core/event-bus.js";
 import type { VideoEmbedConfig } from "../types/index.js";
 import { copyFor, detectLang, groupSlots, nextSlotLine, visitorTimeZone } from "./i18n.js";
 import { fetchLinkCard, whenIdleOrEngaged } from "./link-card.js";
-import { brandTokens, createShadowHost, dockStyle, el, ICONS, prefersReducedMotion, trapTab } from "./ui.js";
+import { brandTokens, createShadowHost, dockStyle, el, ICONS, prefersReducedMotion, trapTab, watchClock } from "./ui.js";
 
 const CSS = `
-.vw{position:fixed;pointer-events:auto;width:128px;height:184px;border-radius:20px;overflow:hidden;background:#101623;color:#fff;transition:width .28s cubic-bezier(.2,.8,.2,1),height .28s cubic-bezier(.2,.8,.2,1),border-radius .28s,transform .18s;display:flex;flex-direction:column}
+.vdock{position:fixed;pointer-events:auto}
+.vw{position:relative;width:128px;height:184px;border-radius:20px;overflow:hidden;background:#101623;color:#fff;transition:width .28s cubic-bezier(.2,.8,.2,1),height .28s cubic-bezier(.2,.8,.2,1),border-radius .28s,transform .18s;display:flex;flex-direction:column}
 .vw[data-state="bubble"]:hover{transform:translateY(-3px) scale(1.02)}
 .vw[data-state="card"]{width:320px;height:auto;max-width:calc(100vw - 24px);border-radius:22px}
 .media{position:relative;flex:1;min-height:0}
 .vw[data-state="card"] .media{flex:none;height:380px;max-height:calc(100vh - 160px)}
 video{width:100%;height:100%;object-fit:cover;display:block;background:#101623}
-.hit{position:absolute;inset:0;border:0;padding:0;background:transparent;cursor:pointer;border-radius:inherit}
-.lab{position:absolute;left:8px;right:8px;bottom:8px;display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:10px;background:rgba(16,22,35,.72);color:#fff;font:500 12px/1.2 inherit;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);pointer-events:none;white-space:nowrap;overflow:hidden}
-.lab i{width:18px;height:18px;border-radius:999px;background:var(--brand);color:var(--brand-fg);display:grid;place-items:center;flex:none}
+.hit{position:absolute;top:0;right:0;bottom:0;left:0;border:0;padding:0;background:transparent;cursor:pointer;border-radius:inherit}
+.lab{position:absolute;left:8px;right:8px;bottom:8px;display:flex;align-items:center;padding:6px 8px;border-radius:10px;background:rgba(16,22,35,.72);color:#fff;font:500 12px/1.2 inherit;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);pointer-events:none;white-space:nowrap;overflow:hidden}
+.lab i{margin-right:6px;width:18px;height:18px;border-radius:999px;background:var(--brand);color:var(--brand-fg);display:grid;place-items:center;flex:none}
 .lab span{overflow:hidden;text-overflow:ellipsis}
 .dismiss{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:999px;border:0;padding:0;background:rgba(16,22,35,.55);color:#fff;display:grid;place-items:center;cursor:pointer}
 .dismiss svg{width:11px;height:11px}
-.top{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:6px;justify-content:space-between}
+.top{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between}
 .ic{width:32px;height:32px;border-radius:10px;background:rgba(16,22,35,.6);color:#fff;border:0;padding:0;display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .ic:focus-visible,.hit:focus-visible,.dismiss:focus-visible{outline:2px solid #fff;outline-offset:-2px}
 .prog{position:absolute;left:12px;right:12px;top:48px;height:3px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden;pointer-events:none}
 .prog b{display:block;height:100%;width:0;background:#fff}
 .cap{position:absolute;left:12px;right:12px;bottom:12px;padding:8px 10px;border-radius:10px;background:rgba(16,22,35,.72);font-size:14px;line-height:1.4;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);pointer-events:none}
-.tap{position:absolute;inset:56px 0 0 0;border:0;padding:0;background:transparent;cursor:pointer}
+.tap{position:absolute;top:56px;right:0;bottom:0;left:0;border:0;padding:0;background:transparent;cursor:pointer}
 .act{padding:12px;display:grid;gap:8px;background:#101623}
 .act .cta{width:100%}
 .act .meta{color:#B6BCC8;text-align:center;min-height:16px}
 .vw[data-state="bubble"] .card-only,.vw[data-state="card"] .bubble-only{display:none!important}
 @media (max-width:560px){
-  .vw[data-state="card"]{left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;translate:none!important;width:auto;max-width:none}
+  .vdock.card{left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;transform:none!important}
+  .vw[data-state="card"]{width:auto;max-width:none}
   .vw[data-state="card"] .media{height:320px}
 }
 `;
@@ -74,8 +77,9 @@ function duration(sec: number): string {
 
 export class Video2026Manager {
   private host: HTMLElement | null = null;
-  private abort: AbortController | null = null;
-  private stopIdle: (() => void) | null = null;
+  private listeners: Listeners | null = null;
+  private hls: HlsInstance | null = null;
+  private alive = false;
 
   constructor(
     private readonly ns: string,
@@ -84,28 +88,33 @@ export class Video2026Manager {
     private readonly locale?: string
   ) {}
 
+  /** Rejects if the widget cannot be built; the namespace then renders the classic video. */
   async create(config: VideoEmbedConfig): Promise<void> {
+    if (!config.videoSrc || !config.bookingLink) {
+      rt.errorHandler.handleError({ message: "Video embed: missing videoSrc or bookingLink", level: "warning", ns: this.ns });
+      return;
+    }
+    this.destroy();
     try {
-      if (!config.videoSrc || !config.bookingLink) {
-        errorHandler.handleError({ message: "Video embed: missing videoSrc or bookingLink", level: "warning", ns: this.ns });
-        return;
-      }
-      this.destroy();
       const lang = detectLang(this.locale);
       const copy = copyFor(lang);
       const tz = visitorTimeZone();
       const reduced = prefersReducedMotion();
       const videoId = `mg-video-${this.ns}-${Math.random().toString(36).slice(2, 8)}`;
       const { host, root } = createShadowHost(videoId, CSS, 999990, brandTokens(config.buttonColor, config.bookingCtaColor));
-      const abort = new AbortController();
-      const sig = abort.signal;
+      const ls = new Listeners();
+      this.host = host;
+      this.listeners = ls;
+      this.alive = true;
       const state = { expanded: false };
       let hostName = "";
       let dur = "";
       let cues: Cue[] = [];
 
+      const vdock = el("div", "vdock");
+      Object.assign(vdock.style, dockStyle(config.position ?? "bottom-right", config.offset ?? "20px"));
       const vw = el("div", "vw sh enter", { "data-state": "bubble" });
-      Object.assign(vw.style, dockStyle(config.position ?? "bottom-right", config.offset ?? "20px"));
+      vdock.appendChild(vw);
       const media = el("div", "media");
       const video = document.createElement("video");
       video.muted = true;
@@ -149,7 +158,7 @@ export class Video2026Manager {
       const meta = el("div", "meta");
       act.append(cta, meta);
       vw.append(media, act);
-      root.appendChild(vw);
+      root.appendChild(vdock);
 
       const updateLabel = () => {
         const first = hostName.split(/\s+/)[0];
@@ -157,10 +166,10 @@ export class Video2026Manager {
         labText.textContent = parts.length ? parts.join(" · ") : (config.videoCta ?? copy.playVideo);
         hit.setAttribute("aria-label", first ? `${copy.playVideo}: ${hostName}` : copy.playVideo);
       };
-      video.addEventListener("loadedmetadata", () => {
+      ls.on(video, "loadedmetadata", () => {
         if (isFinite(video.duration) && video.duration > 0) { dur = duration(video.duration); updateLabel(); }
-      }, { signal: sig });
-      video.addEventListener("timeupdate", () => {
+      });
+      ls.on(video, "timeupdate", () => {
         if (video.duration) bar.style.width = `${(video.currentTime / video.duration) * 100}%`;
         if (cues.length && state.expanded) {
           const t = video.currentTime;
@@ -168,7 +177,7 @@ export class Video2026Manager {
           cap.textContent = cue ? cue.text : "";
           cap.hidden = !cue;
         }
-      }, { signal: sig });
+      });
 
       if (config.captionsSrc && typeof fetch === "function") {
         fetch(config.captionsSrc, { credentials: "omit" })
@@ -211,11 +220,11 @@ export class Video2026Manager {
         this.bus.emit("videoMinimized", { videoId });
       };
 
-      hit.addEventListener("click", expand, { signal: sig });
-      close.addEventListener("click", minimize, { signal: sig });
-      dismiss.addEventListener("click", () => this.destroy(), { signal: sig });
-      mute.addEventListener("click", () => setMuted(!video.muted), { signal: sig });
-      tap.addEventListener("click", () => {
+      ls.on(hit, "click", expand);
+      ls.on(close, "click", minimize);
+      ls.on(dismiss, "click", () => this.destroy());
+      ls.on(mute, "click", () => setMuted(!video.muted));
+      ls.on(tap, "click", () => {
         if (video.paused) {
           video.play().catch(() => undefined);
           tap.setAttribute("aria-label", copy.pause);
@@ -225,47 +234,66 @@ export class Video2026Manager {
           tap.setAttribute("aria-label", copy.play);
           this.bus.emit("videoPause", { videoId });
         }
-      }, { signal: sig });
-      cta.addEventListener("click", () => this.onOpen(config.bookingLink), { signal: sig });
-      vw.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.expanded) { e.stopPropagation(); minimize(); } }, { signal: sig });
-      trapTab(vw, root, sig);
-
-      this.stopIdle = whenIdleOrEngaged(vw, () => {
-        fetchLinkCard(config.bookingLink, tz, lang).then((card) => {
-          if (sig.aborted || !card) return;
-          if (config.avatar !== false && card.host) { hostName = card.host.name; updateLabel(); }
-          if (config.showNextSlot !== false) {
-            meta.textContent = config.subline ?? nextSlotLine(groupSlots(card.nextSlots.map((x) => x.start), lang, tz), lang) ?? "";
-          }
-        });
       });
-      if (config.subline) meta.textContent = config.subline;
+      ls.on(cta, "click", () => this.onOpen(config.bookingLink));
+      ls.on(vw, "keydown", ((e: KeyboardEvent) => { if (e.key === "Escape" && state.expanded) { e.stopPropagation(); minimize(); } }) as EventListener);
+      trapTab(vw, root, ls);
+
+      let card: { nextSlots: Array<{ start: string }> } | null = null;
+      const refreshMeta = () => {
+        if (config.subline) { meta.textContent = config.subline; return; }
+        if (config.showNextSlot === false || !card) return;
+        meta.textContent = nextSlotLine(groupSlots(card.nextSlots.map((x) => x.start), lang, tz), lang) ?? "";
+      };
+      ls.add(whenIdleOrEngaged(vw, () => {
+        fetchLinkCard(config.bookingLink, tz, lang)
+          .then((c) => {
+            if (!this.alive || !c) return;
+            if (config.avatar !== false && c.host) { hostName = c.host.name; updateLabel(); }
+            card = c;
+            refreshMeta();
+          })
+          .catch(() => undefined);
+      }));
+      ls.add(watchClock(refreshMeta));
+      refreshMeta();
+
+      // Keep the expanded card fixed to the phone's bottom edge
+      const syncDock = () => vdock.classList.toggle("card", state.expanded);
+      ls.on(hit, "click", syncDock);
+      ls.on(close, "click", syncDock);
+      ls.on(vw, "keydown", syncDock);
 
       document.body.appendChild(host);
-      this.host = host;
-      this.abort = abort;
-
-      if (config.videoSrc.endsWith(".m3u8")) await this.attachHls(video, config.videoSrc, config.posterImage);
-      else video.src = config.videoSrc;
     } catch (err) {
-      errorHandler.handleError({ message: "Failed to create video embed", level: "error", ns: this.ns, error: err as Error });
+      this.destroy();
+      throw err;
     }
+
+    const video = this.host?.shadowRoot?.querySelector("video") as HTMLVideoElement | null;
+    if (!video) return;
+    if (config.videoSrc.endsWith(".m3u8")) await this.attachHls(video, config.videoSrc, config.posterImage);
+    else video.src = config.videoSrc;
   }
 
   destroy(): void {
-    this.abort?.abort();
-    this.stopIdle?.();
+    this.alive = false;
+    try { this.hls?.destroy(); } catch { /* already gone */ }
+    this.hls = null;
+    this.listeners?.clear();
     this.host?.parentNode?.removeChild(this.host);
     this.host = null;
-    this.abort = null;
-    this.stopIdle = null;
+    this.listeners = null;
   }
 
   private async attachHls(video: HTMLVideoElement, src: string, poster?: string): Promise<void> {
     if (video.canPlayType("application/vnd.apple.mpegurl")) { video.src = src; return; }
     await loadHls();
+    // Destroyed (or re-created) while hls.js was loading: attach nothing
+    if (!this.alive || !video.isConnected) return;
     if (window.Hls?.isSupported()) {
       const hls = new window.Hls();
+      this.hls = hls as unknown as HlsInstance;
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(window.Hls.Events.ERROR, (_, data) => { if (data.fatal && poster) video.poster = poster; });

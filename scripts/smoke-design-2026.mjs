@@ -57,12 +57,14 @@ async function page(params, viewport = { width: 1280, height: 800 }, extra = {})
   const ctx = await browser.newContext({ viewport, locale: "de-DE", timezoneId: "Europe/Berlin", ...extra });
   const p = await ctx.newPage();
   const errors = [];
+  const requests = [];
   p.on("pageerror", (e) => errors.push(String(e)));
+  p.on("request", (r) => requests.push(r.url()));
   // keep the smoke test offline: stub the real booking page and the video
   await p.route(/cal\.meetergo\.com/, (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<body style='font:16px system-ui;padding:24px'>Buchungsseite (Stub)</body>" }));
   await p.route(/\.mp4$/, (r) => r.fulfill({ status: 404, body: "" }));
   await p.goto(`${base}?${new URLSearchParams(params)}`);
-  return { p, ctx, errors };
+  return { p, ctx, errors, requests };
 }
 const shadow = (p, hostSel, sel) => p.locator(`${hostSel} >> css=${sel}`);
 
@@ -138,6 +140,10 @@ try {
   {
     const { p, ctx, errors } = await page({ design: "2026", widget: "sidebar" });
     const tab = shadow(p, "#mg-default-sidebar-2026-right", ".edge");
+    await tab.waitFor();
+    await p.waitForTimeout(400);
+    const tb = await tab.boundingBox();
+    check(Math.abs(tb.y + tb.height / 2 - 400) <= 2 && Math.round(tb.x + tb.width) === 1280, "sidebar: tab centred on the right edge");
     await tab.hover();
     await p.waitForTimeout(500);
     await p.screenshot({ path: `${SHOTS}/sidebar-2026-closed.png` });
@@ -172,8 +178,9 @@ try {
   }
   // ── Classic stays classic
   {
-    const { p, ctx } = await page({ design: "classic", widget: "all" });
+    const { p, ctx, requests } = await page({ design: "classic", widget: "all" });
     await p.waitForTimeout(300);
+    check(!requests.some((u) => /design-2026\.[^/]*\.js|link-card/.test(u)), "classic: no design chunk or link-card request");
     check(await p.locator("#mg-default-float-btn.mg-float-button").count() === 1, "classic: floating button is today's element");
     check(await p.locator("[data-meetergo-design='2026'][id^='mg-']").count() === 0, "classic: no 2026 hosts");
     await p.screenshot({ path: `${SHOTS}/classic-all.png` });
