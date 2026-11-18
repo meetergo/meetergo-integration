@@ -7,8 +7,13 @@ function postFromBookingPage(event: string, data: unknown) {
   window.dispatchEvent(new MessageEvent("message", { data: { event, data } }));
 }
 
+const sdks: MeetergoSDK[] = [];
+// Stop every scanner, so no MutationObserver fires after the environment is torn down
+afterEach(() => sdks.splice(0).forEach((s) => s.destroy()));
+
 function sdkWith(...namespaces: string[]) {
   const sdk = new MeetergoSDK();
+  sdks.push(sdk);
   sdk.boot();
   sdk.startScanner();
   const callable = sdk.buildSDKCallable();

@@ -11,6 +11,7 @@
   "browser": "./dist/esbuild/browser.js",
   "jest": {
     "testEnvironment": "jsdom",
+    "globalSetup": "<rootDir>/jest.global-setup.js",
     "testMatch": ["<rootDir>/src/**/*.test.ts"],
     "transform": { "^.+\\.ts$": "ts-jest" },
     "moduleNameMapper": { "^(\\.{1,2}/.*)\\.js$": "$1" },
