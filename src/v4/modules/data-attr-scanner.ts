@@ -131,10 +131,10 @@ export class DataAttrScanner {
       return;
     }
 
-    // Default: modal
+    // Default: modal. Read the link at click time: pages may change it after load.
     el.addEventListener("click", (e) => {
       e.preventDefault();
-      this.callbacks.openModal(link, ns, prefill, design);
+      this.callbacks.openModal(el.getAttribute(LINK_ATTR) || link, ns, prefill, design);
     });
 
     // Keyboard accessibility
@@ -143,7 +143,7 @@ export class DataAttrScanner {
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          this.callbacks.openModal(link, ns, prefill, design);
+          this.callbacks.openModal(el.getAttribute(LINK_ATTR) || link, ns, prefill, design);
         }
       });
     }
