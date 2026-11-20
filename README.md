@@ -457,12 +457,14 @@ new integrations:
 <script src="https://cdn.meetergo.com/v4/integration.js"></script>
 ```
 
-> **Deprecated mirrors — do not use for new setups.** The old S3 URLs
+> **Frozen legacy URLs — do not use for new setups.** The old S3 URLs
 > (`liv-showcase.s3.eu-central-1.amazonaws.com/browser-v2.js` / `browser-v3.js` /
-> `browser-v4.js`) are legacy and are no longer the source of truth. They remain
-> reachable only so existing embeds keep working. `browser-v4.js` is the same v4
-> build as the canonical URL and must be kept in sync on every release until it
-> is retired; `browser-v3.js`/`browser-v2.js` are the pre-v4 generation.
+> `browser-v4.js`) stay reachable so existing embeds keep working, but they are
+> frozen: releases go to the Bunny URL only and these files are never updated
+> (`browser-v2.js`/`browser-v3.js`: pre-v4 script, March 2026; `browser-v4.js`:
+> an early v4 build, July 2026). A customer gets current fixes by switching to
+> the canonical URL. Decision: meetergo repo,
+> `docs/decisions/2026-11-20-legacy-s3-embed-scripts-stay-frozen.md`.
 
 ---
 
