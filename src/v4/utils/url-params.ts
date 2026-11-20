@@ -23,8 +23,10 @@ export function buildIframeURL(
   link: string,
   params: Record<string, string | undefined>
 ): string {
+  // Links are pasted by hand; surrounding whitespace must not break the embed.
+  const trimmed = link.trim();
   // Ensure link has a scheme
-  const base = link.startsWith("http") ? link : `https://${link}`;
+  const base = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
 
   // Merge params into existing URL search params
   let url: URL;

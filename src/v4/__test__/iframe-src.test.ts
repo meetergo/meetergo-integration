@@ -126,3 +126,15 @@ describe("standalone managers keep their old URLs", () => {
     expect(parked("standalone")[0].src).toBe(`${LINK}?embed=true`);
   });
 });
+
+describe("hand-pasted links", () => {
+  it("an inline embed whose link carries surrounding whitespace still loads the booking page", () => {
+    document.body.innerHTML = `<div class="meetergo-iframe" link=" ${LINK} "></div>`;
+    const sdk = new MeetergoSDK();
+    sdk.boot();
+    sdk.startScanner();
+    const src = document.querySelector<HTMLIFrameElement>(".meetergo-iframe iframe")?.src ?? "";
+    expect(src.startsWith(`${LINK}?`)).toBe(true);
+    sdk.destroy();
+  });
+});
